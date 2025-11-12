@@ -1,0 +1,52 @@
+# sample_greenhouse_job.txt
+# Source pattern: Greenhouse blog & docs on effective job posts (structure: title, pitch, responsibilities, skills, benefits, how to apply).
+# This is a synthetic, generic job posting formatted like a typical Greenhouse-hosted role.
+# Use this for RAG demos to extract responsibilities/requirements and detect "Apply" cues.
+
+JOB TITLE
+Frontend Software Engineer (React/TypeScript)
+
+COMPANY & ROLE PITCH
+We build accessible, high‑performance web experiences for millions of users. You’ll join a small team shipping features weekly, with strong mentorship and clear growth paths.
+
+LOCATION
+Toronto, ON (Hybrid: 3 days/week in office)
+
+EMPLOYMENT TYPE
+Full‑time · Permanent
+
+RESPONSIBILITIES
+- Deliver accessible, responsive UI using React, TypeScript, and modern build tooling.
+- Collaborate with design to implement components and micro‑interactions.
+- Integrate REST/GraphQL endpoints; handle auth and error states.
+- Write unit/integration tests; participate in code review and CI/CD.
+- Partner with PM/Design on roadmaps; ship iteratively.
+
+REQUIRED QUALIFICATIONS
+- 2+ years building React applications (or strong portfolio).
+- Proficiency with TypeScript, modern CSS, and testing frameworks.
+- Experience with accessibility (ARIA, keyboard nav) and performance basics.
+- Clear communication; ability to decompose large tasks into small steps.
+
+NICE TO HAVE
+- Experience with Next.js, Vite, or Webpack.
+- Familiarity with Node.js, GraphQL, or cloud (AWS/GCP).
+
+BENEFITS (EXAMPLE)
+- Competitive salary & equity; health/dental/vision.
+- Learning stipend; hardware budget; parental leave.
+- Flexible PTO and hybrid schedule.
+
+HOW TO APPLY (GREENHOUSE‑STYLE)
+Click **“Apply for this job”** to submit your application. You’ll typically be asked for:
+- Resume (PDF or link), optional cover letter.
+- Basic info (name, email, phone) and work eligibility.
+- Links (GitHub, portfolio, LinkedIn) and a few short questions.
+Applications are reviewed on a rolling basis. If there is a formal close date, it will be listed as **Application deadline: YYYY‑MM‑DD 23:59 local time**.
+
+ACCESSIBILITY & ACCOMMODATION
+We welcome applicants of all backgrounds. If you need an accommodation during the application or interview process, please let us know.
+
+LEGAL / EEO STATEMENT (EXAMPLE)
+We are an equal opportunity employer. We do not discriminate on the basis of race, color, religion, sex, gender identity, sexual orientation, national origin, age, disability, or any other protected status.
+
