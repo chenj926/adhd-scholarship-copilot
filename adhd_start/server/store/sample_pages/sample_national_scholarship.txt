@@ -1,0 +1,51 @@
+# sample_national_scholarship.txt
+# Source pattern: University of Toronto National Scholarship (2025 cycle) public page.
+# This is a paraphrased sample for RAG demos, not an official posting.
+# Key ideas and dates adapted from: nomination & application timelines, selection criteria, and AI-use policy.
+# Use this as a stand‑alone text corpus for field extraction (deadline, references, values, AI policy).
+
+PROGRAM: National Scholarship — Sample (based on U of T structure)
+
+OVERVIEW
+The National Scholarship recognizes students who combine outstanding academic achievement with original and creative thinking and strong community or school leadership. Nomination by a Canadian secondary school (one nominee per school, typically via a “National Book Award” process) is required before applying.
+
+ELIGIBILITY (summary)
+- Citizenship/Status: Canadian citizen, permanent resident, or protected person.
+- School standing: Final year of Canadian secondary school or first‑year CEGEP.
+- Admission: Must apply to at least one undergraduate program at the host university for the same academic year (or plan a one‑year deferral).
+- Nomination: Must be nominated by your school for the National Book Award.
+
+APPLICATION REQUIREMENTS
+- Online scholarship application (access typically follows submission of the university admission application).
+- One confidential reference letter from a teacher, counsellor, or community leader (sent directly by the referee).
+- Short‑answer responses and a longer statement demonstrating originality, creativity, and community/leadership impact.
+- Official/unofficial transcripts as requested; additional documents may be required for verification.
+
+SELECTION CRITERIA (typical themes)
+- Original & creative thinking.
+- High academic achievement.
+- Evidence of leadership and contribution to school/community.
+- Personal initiative and integrity.
+
+IMPORTANT DATES & DEADLINES (sample, 2025 cycle style)
+- School nomination deadline (National Book Award): 2025‑10‑10 23:59 ET
+- Student deadline to apply to the university: 2025‑10‑17 23:59 ET
+- Scholarship application deadline: 2025‑10‑31 23:59 ET
+- Referee letter due: 2025‑11‑07 23:59 ET
+- Finalist interviews: 2026‑02 (virtual; selected candidates only)
+
+AWARD VALUE (illustrative)
+- Up to four years of support for tuition, incidental, and residence fees at the host university.
+- Runners‑up may receive named entrance awards with fixed annual values.
+
+AI POLICY (explicit)
+Use of generative AI tools (e.g., “ChatGPT” or similar) to author or compose any portion of the undergraduate award application is **not permitted**. Submissions containing AI‑generated content may result in **disqualification** from award eligibility. Applicants should produce their own original work and follow institutional academic integrity expectations.
+
+FRAUD & INTEGRITY REMINDERS
+- Do not pay third‑party “agents” who claim to secure awards or write applications.
+- Provide accurate information; falsification can lead to disqualification and discipline.
+
+CONTACT / SUPPORT (example)
+- Scholarship inquiry web form (for nominees, referees, and counsellors).
+- Guidance for school officials on nominating a single candidate per school year.
+

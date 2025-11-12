@@ -1,0 +1,53 @@
+# sample_workday_job.txt
+# Source pattern: Public Workday candidate sites (myworkdayjobs.com) where postings commonly show: Apply button, Locations, Time Type, Posted On, Job Requisition ID, description, qualifications.
+# This is a synthetic, generic Workday‑style posting for RAG demos.
+
+JOB TITLE
+Work Management Coordinator
+
+COMPANY
+ExampleEnergy (Workday Candidate Site)
+
+LOCATIONS
+Bruce County, ON (Hybrid)
+
+TIME TYPE
+Full time
+
+POSTED ON
+2025‑10‑24
+
+JOB REQUISITION ID
+10011786
+
+SUMMARY
+The Work Management Coordinator supports scheduling, resource alignment, and cross‑functional coordination for planned and emergent maintenance activities. You will collaborate with operations, engineering, supply chain, and EHS to ensure safe, on‑time execution.
+
+RESPONSIBILITIES
+- Build and maintain short‑ and mid‑term work schedules; track progress and constraints.
+- Facilitate daily/weekly planning meetings; publish action items.
+- Coordinate materials, access permits, and lock‑out/tag‑out workflow with stakeholders.
+- Monitor execution metrics (schedule adherence, backlog, defects) and propose improvements.
+- Ensure documentation, change control, and regulatory compliance.
+
+QUALIFICATIONS
+- 3+ years in maintenance planning/scheduling, PMO, or operations coordination.
+- Proficiency with work management tools (e.g., SAP PM, Maximo) and Excel.
+- Strong communication and stakeholder management; able to drive decisions.
+- Safety‑first mindset; knowledge of permits, isolations, and field workflows.
+
+PREFERRED
+- Experience in utilities/energy, industrial facilities, or critical infrastructure.
+- Familiarity with reliability engineering concepts and formal RCAs.
+
+HOW TO APPLY (WORKDAY‑STYLE)
+Click **Apply** or **Apply Now** to begin. You may be prompted to:
+- Sign in or create a Workday candidate profile.
+- Upload a resume (PDF/Doc) and optionally a cover letter.
+- Complete applicant questions; provide work eligibility & location preferences.
+- Review and submit.
+Some organizations post a **closing date**; otherwise, applications may be reviewed on a rolling basis.
+
+ACCOMMODATION & EQUAL OPPORTUNITY (EXAMPLE)
+We strive to provide reasonable accommodation to qualified individuals with disabilities. Equal opportunity employer.
+
