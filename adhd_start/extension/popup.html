@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>ADHD Scholarship Copilot</title>
+  <style>
+    body {
+      font-family: system-ui;
+      margin: 14px;
+      max-width: 340px;
+    }
+    textarea {
+      width: 100%;
+    }
+    button {
+      margin-top: 8px;
+    }
+    .muted {
+      color: #667;
+    }
+  </style>
+</head>
+<body>
+  <h3>ADHD Scholarship Copilot (Demo)</h3>
+  <textarea id="goal" rows="3" placeholder="Optional: what's your goal? e.g., Tailor this resume"></textarea>
+  <button id="plan">Micro-start</button>
+  <div id="result" class="muted" style="margin-top:10px;"></div>
+  <script type="module" src="./popup.js"></script>
+</body>
+</html>
