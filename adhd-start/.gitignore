@@ -1,0 +1,56 @@
+# -----------------------------
+# GLOBAL
+# -----------------------------
+.DS_Store
+Thumbs.db
+*.log
+.env
+*.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# -----------------------------
+# PYTHON BACKEND (server/)
+# -----------------------------
+server/.venv/
+server/venv/
+server/env/
+server/.pytest_cache/
+server/.mypy_cache/
+server/.idea/
+server/.vscode/
+server/.env
+server/__pycache__/
+server/*.sqlite
+server/*.db
+
+# -----------------------------
+# CHROME EXTENSION FRONTEND (extension/)
+# -----------------------------
+extension/node_modules/
+extension/package-lock.json
+extension/.turbo/
+extension/.parcel-cache/
+extension/.cache/
+extension/dist/
+extension/build/
+extension/*.map
+extension/*.log
+
+# TypeScript build outputs (already recompiled from popup.ts)
+extension/popup.js
+extension/*.d.ts
+
+# Optional: if using local dev tools
+extension/.vscode/
+extension/.DS_Store
+
+# -----------------------------
+# MISCELLANEOUS
+# -----------------------------
+# Editor & OS files
+.vscode/
+.idea/
+.DS_Store
