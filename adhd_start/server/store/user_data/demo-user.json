@@ -1,0 +1,65 @@
+{
+  "user_id": "demo-user",
+  "demographics": {
+    "timezone": "America/Toronto"
+  },
+  "program": "UofT Industrial Engineering",
+  "interests": [
+    "AI/ML"
+  ],
+  "preferences": {
+    "tone": "warm_direct",
+    "block_minutes": 20,
+    "checkins": [
+      "T+5",
+      "T+12"
+    ],
+    "coach_only_on_restricted": true
+  },
+  "history": {
+    "apps": [
+      {
+        "id": "bm_4ab7d653615d",
+        "url": "https://example.com/scholarship/abc",
+        "title": "ABC Scholarship",
+        "source_site": "example.com",
+        "status": "in_progress",
+        "deadline": "2025-02-01",
+        "tags": [
+          "STEM",
+          "High $$"
+        ],
+        "created_at": "2025-11-15T17:46:47.870019+00:00",
+        "updated_at": "2025-11-15T17:48:59.681255+00:00"
+      },
+      {
+        "id": "bm_a1eb1b8a0faf",
+        "url": "https://casi.ca/Student-Awards#ElvieLSmith",
+        "title": "CASI / IASC - Student Awards",
+        "source_site": "casi.ca",
+        "status": "saved",
+        "deadline": null,
+        "tags": [],
+        "created_at": "2025-11-16T01:34:30.032640+00:00",
+        "updated_at": "2025-11-16T02:01:10.028414+00:00"
+      },
+      {
+        "id": "bm_637cc842ee16",
+        "url": "chrome://extensions/",
+        "title": "Extensions",
+        "source_site": "extensions",
+        "status": "saved",
+        "deadline": null,
+        "tags": [],
+        "created_at": "2025-11-16T01:43:47.452956+00:00",
+        "updated_at": "2025-11-16T01:43:47.452956+00:00"
+      }
+    ],
+    "wins": [],
+    "frictions": []
+  },
+  "weights": {
+    "source_penalty": {},
+    "nudge_success": {}
+  }
+}

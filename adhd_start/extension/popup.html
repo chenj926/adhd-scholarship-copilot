@@ -7,24 +7,60 @@
     body {
       font-family: system-ui;
       margin: 14px;
-      max-width: 340px;
+      width: 420px;          /* ⭐ wider popup */
+      max-width: 420px;
+      font-size: 14px;
+      line-height: 1.45;
     }
     textarea {
       width: 100%;
+      font-size: 13px;
     }
     button {
       margin-top: 8px;
+      padding: 6px 10px;
+      font-size: 13px;
     }
     .muted {
       color: #667;
+      font-size: 12px;
+    }
+    h4 {
+      margin-bottom: 4px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
+
+  <!-- ⭐ SAVED SCHOLARSHIPS ⭐ -->
+  <h4>Saved Scholarships</h4>
+  <button id="btn-show-saved">Show Saved</button>
+  <div id="saved-list" style="margin-top:6px; font-size:13px;"></div>
+
+  <hr style="margin:12px 0" />
+
   <h3>ADHD Scholarship Copilot (Demo)</h3>
-  <textarea id="goal" rows="3" placeholder="Optional: what's your goal? e.g., Tailor this resume"></textarea>
+
+  <textarea id="goal" rows="3"
+    placeholder="Optional: what's your goal? e.g., 'Tailor this resume'"></textarea>
+
   <button id="plan">Micro-start</button>
   <div id="result" class="muted" style="margin-top:10px;"></div>
+
+  <!-- ⭐ REQUIREMENTS SCAN ⭐ -->
+  <hr style="margin:12px 0" />
+
+  <h4>Requirements</h4>
+
+  <button id="btn-scan">Scan Page</button>
+  <div id="req-status" class="muted" style="margin-top:6px;"></div>
+  <div id="req-out" style="margin-top:6px;"></div>
+
+  <!-- ⭐ SAVE BUTTON ⭐ -->
+  <button id="btn-save" style="margin-top:12px;">Save scholarship</button>
+  <div id="save-status" class="muted" style="margin-top:4px;"></div>
+
   <script type="module" src="./popup.js"></script>
 </body>
 </html>
