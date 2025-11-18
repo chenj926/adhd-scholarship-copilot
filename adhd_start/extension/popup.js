@@ -10,7 +10,7 @@ const BOOKMARKS_URL = "http://localhost:8000/bookmarks?user_id=demo-user";
 const GOAL_DEFAULT = "Help me start this application";
 
 function escapeHtml(s) {
-  return s
+  return String(s)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -47,20 +47,56 @@ async function requestPlan(goal, text) {
 }
 
 function renderPlan(el, data) {
-  const policyBadge =
-    data.ai_policy === "coach_only"
-      ? `<span style="padding:2px 6px;border-radius:8px;background:#fff3cd;color:#8a6d3b;border:1px solid #ffeeba;">AI drafting restricted</span>`
-      : "";
+  const micro = data.micro_start || "Open the page and list 3 required items.";
+  const mins = data.block_minutes || 20;
+  const cis = Array.isArray(data.check_ins) ? data.check_ins : ["T+5", "T+12"];
+  const purpose =
+    data.purpose || "Build momentum toward this scholarship or application.";
+  const deadline = data.deadline;
 
-  el.innerHTML =
-    `<div style="line-height:1.55">` +
-    `<div><b>Micro-start:</b> ${escapeHtml(data.micro_start)}</div>` +
-    `<div><b>Block:</b> ${data.block_minutes} min</div>` +
-    `<div><b>Check-ins:</b> ${(data.check_ins || []).join(", ")}</div>` +
-    (data.purpose ? `<div><b>Purpose:</b> ${escapeHtml(data.purpose)}</div>` : "") +
-    (data.deadline ? `<div><b>Deadline:</b> ${escapeHtml(data.deadline)}</div>` : "") +
-    (policyBadge ? `<div style="margin-top:6px">${policyBadge}</div>` : "") +
-    `</div>`;
+  const policy = data.ai_policy || "ok";
+  const badgeClass = policy === "coach_only" ? "badge badge-coach" : "badge badge-ok";
+  const badgeLabel =
+    policy === "coach_only"
+      ? "Coach-only (no AI drafting)"
+      : "AI-ok (co-writing allowed)";
+
+  el.innerHTML = `
+    <div class="plan-inner">
+      <div class="plan-header-row">
+        <span class="label">Your micro-start</span>
+        <span class="${badgeClass}">${badgeLabel}</span>
+      </div>
+      <div class="plan-micro">${escapeHtml(micro)}</div>
+
+      <div class="plan-row">
+        <div>
+          <div class="label">Block</div>
+          <div>${mins} min</div>
+        </div>
+        <div>
+          <div class="label">Check-ins</div>
+          <div>${cis.join(" • ")}</div>
+        </div>
+      </div>
+
+      <div style="margin-top:4px;">
+        <div class="label">Purpose</div>
+        <div>${escapeHtml(purpose)}</div>
+      </div>
+
+      ${
+        deadline
+          ? `
+        <div style="margin-top:4px;">
+          <div class="label">Deadline</div>
+          <div>${escapeHtml(deadline)}</div>
+        </div>
+      `
+          : ""
+      }
+    </div>
+  `;
 }
 
 function startBlock(minutes, checkIns) {
@@ -74,6 +110,12 @@ function startBlock(minutes, checkIns) {
 async function onClickPlan() {
   const result = $("#result");
   const goalInput = $("#goal");
+  const btn = $("#plan");
+
+  if (!result) return;
+
+  btn && (btn.disabled = true);
+  result.classList.remove("error");
   result.textContent = "Capturing page text…";
 
   try {
@@ -87,7 +129,10 @@ async function onClickPlan() {
     startBlock(data.block_minutes, data.check_ins);
   } catch (err) {
     console.error(err);
+    result.classList.add("error");
     result.textContent = err?.message || "Something went wrong.";
+  } finally {
+    btn && (btn.disabled = false);
   }
 }
 
@@ -104,17 +149,19 @@ async function requestParse(text) {
 }
 
 function renderReqs(container, data) {
-  const badge =
-    data.ai_policy === "coach_only"
-      ? `<div style="margin:6px 0;padding:6px;border-radius:8px;background:#fff3cd;color:#8a6d3b;border:1px solid #ffeeba;">
-           This page forbids AI-written text. Coach-only mode suggested.
-         </div>`
-      : "";
-
   const refs = data.refs_required ?? "—";
   const valuesList = (data.values || [])
     .map((v) => `<li>${escapeHtml(v)}</li>`)
     .join("");
+
+  const policy = data.ai_policy || "ok";
+  const badge =
+    policy === "coach_only"
+      ? `<div style="margin:6px 0;">
+           <span class="badge badge-coach">This page forbids AI-written text. Coach-only mode suggested.</span>
+         </div>`
+      : "";
+
   const conf =
     data.confidence != null
       ? ` (~${Math.round(data.confidence * 100)}% sure)`
@@ -122,14 +169,25 @@ function renderReqs(container, data) {
 
   container.innerHTML =
     (data.deadline
-      ? `<div><b>Deadline:</b> ${escapeHtml(data.deadline)}</div>`
+      ? `<div>
+           <div class="label">Deadline</div>
+           <div>${escapeHtml(data.deadline)}</div>
+         </div>`
       : "") +
-    `<div><b>References:</b> ${refs}</div>` +
+    `<div style="margin-top:4px;">
+       <div class="label">References</div>
+       <div>${refs}</div>
+     </div>` +
     (valuesList
-      ? `<div><b>Values / Criteria:</b><ul style="margin:6px 0 0 16px">${valuesList}</ul></div>`
+      ? `<div style="margin-top:4px;">
+           <div class="label">Values / Criteria</div>
+           <ul class="values-list">${valuesList}</ul>
+         </div>`
       : "") +
     badge +
-    (conf ? `<div class="muted" style="margin-top:4px">Confidence${conf}</div>` : "");
+    (conf
+      ? `<div class="muted" style="margin-top:4px;">Confidence${conf}</div>`
+      : "");
 }
 
 /* -------- BOOKMARK / SAVE -------- */
@@ -172,8 +230,7 @@ async function saveCurrentPage() {
     if (statusEl) statusEl.textContent = "Saved ✔";
   } catch (err) {
     console.error(err);
-    if (statusEl) statusEl.textContent =
-      err?.message || "Could not save.";
+    if (statusEl) statusEl.textContent = err?.message || "Could not save.";
   }
 }
 
@@ -193,12 +250,13 @@ function renderBookmarks(container, items) {
 
   container.innerHTML = items
     .map(
-      (bm) =>
-        `<div style="margin-bottom:6px">
-           <b>${escapeHtml(bm.title || "(untitled)")}</b><br/>
-           <span style="color:#666; font-size:12px">${bm.status || "saved"}</span><br/>
-           <span style="color:#888; font-size:11px">${escapeHtml(bm.url || "")}</span>
-         </div>`
+      (bm) => `
+        <div class="saved-item">
+          <div class="saved-title">${escapeHtml(bm.title || "(untitled)")}</div>
+          <div class="saved-meta">${escapeHtml(bm.status || "saved")}</div>
+          <div class="saved-url">${escapeHtml(bm.url || "")}</div>
+        </div>
+      `
     )
     .join("");
 }
@@ -212,8 +270,7 @@ async function onShowSaved() {
     renderBookmarks(listEl, items);
   } catch (err) {
     console.error(err);
-    listEl.textContent =
-      err?.message || "Could not load saved scholarships.";
+    listEl.textContent = err?.message || "Could not load saved scholarships.";
   }
 }
 
@@ -232,7 +289,10 @@ function main() {
     scanBtn.addEventListener("click", async () => {
       const status = document.getElementById("req-status");
       const out = document.getElementById("req-out");
-      if (status) status.textContent = "Capturing & parsing…";
+      if (status) {
+        status.classList.remove("error");
+        status.textContent = "Capturing & parsing…";
+      }
       if (out) out.innerHTML = "";
       try {
         const txt = await captureVisibleText();
@@ -241,8 +301,10 @@ function main() {
         if (out) renderReqs(out, parsed);
       } catch (err) {
         console.error(err);
-        if (status) status.textContent =
-          err?.message || "Parse failed.";
+        if (status) {
+          status.classList.add("error");
+          status.textContent = err?.message || "Parse failed.";
+        }
       }
     });
   }
