@@ -1,4 +1,12 @@
 # server/llm.py
+# ---------------------------------------------------------
+# Central LLM helpers:
+#   - extract_fields_rag_or_llm: for /parse
+#   - make_plan_with_llm: for /plan
+#
+# Uses RAG context from extension.rag.retriever, but keeps
+# all structured extraction logic here for easier debugging.
+# ---------------------------------------------------------
 
 import json
 import os
@@ -9,22 +17,18 @@ from typing import Any, Dict, List, Optional, Tuple
 from dotenv import load_dotenv
 from anthropic import Anthropic
 
-# Try to parse dates if dateutil is available
+# Try to parse dates if available
 try:
     from dateutil import parser as dateparser
 except Exception:  # pragma: no cover
     dateparser = None  # type: ignore
-
-# -------------------------------------------------------------------
-# Environment & client setup
-# -------------------------------------------------------------------
 
 # .../adhd_start/server
 BASE_DIR = Path(__file__).resolve().parent
 # repo root .../adhd-scholarship-copilot
 ROOT_DIR = BASE_DIR.parent
 
-# Load .env from both repo root and adhd_start for robustness
+# Load env from both root and adhd_start
 load_dotenv(ROOT_DIR / ".env")
 load_dotenv(BASE_DIR / ".env")
 
@@ -41,40 +45,25 @@ else:
     print("[llm] No ANTHROPIC_API_KEY found. Using heuristic fallback.")
 
 # -------------------------------------------------------------------
-# Fallback plan used if LLM fails
+# Fallback plan (used if LLM fails)
 # -------------------------------------------------------------------
 
 FALLBACK_PLAN: Dict[str, Any] = {
-    "micro_start": "Open the scholarship page and copy the requirements.",
-    "step_type": "make_outline",
-    "selector": None,
-    "placeholder": "Bullet 1: Why I fit…",
-    "block_minutes": 20,
-    "check_ins": ["T+5", "T+12"],
-    "reentry_script": "I paused; I'll just finish copying requirements.",
-    "purpose": "Reduce startup friction for this application.",
-    "deadline": None,
-    "ai_policy": "ok",
+  "micro_start": "Open the scholarship page and copy the requirements.",
+  "step_type": "make_outline",
+  "selector": None,
+  "placeholder": "Bullet 1: Why I fit…",
+  "block_minutes": 20,
+  "check_ins": ["T+5", "T+12"],
+  "reentry_script": "I paused; I'll just finish copying requirements.",
+  "purpose": "Reduce startup friction for this application.",
+  "deadline": None,
+  "ai_policy": "ok",
 }
 
 # -------------------------------------------------------------------
 # Helpers
 # -------------------------------------------------------------------
-
-def normalize_date_like(s: Optional[str]) -> Optional[str]:
-    """Try to coerce arbitrary date-like strings into YYYY-MM-DD."""
-    if not s:
-        return None
-    if dateparser is None:
-        # Best-effort: look for a YYYY-MM-DD pattern
-        m = re.search(r"\d{4}-\d{2}-\d{2}", s)
-        return m.group(0) if m else s
-    try:
-        dt = dateparser.parse(s, fuzzy=True)
-        return dt.strftime("%Y-%m-%d")
-    except Exception:
-        return None
-
 
 FORBID_PATTERNS = [
     r"no\s+ai[-\s]?generated\s+content",
@@ -84,18 +73,32 @@ FORBID_PATTERNS = [
 ]
 
 
+def normalize_date_like(s: Optional[str]) -> Optional[str]:
+    """Try to coerce arbitrary date-like strings into YYYY-MM-DD."""
+    if not s:
+        return None
+    if dateparser is None:
+        m = re.search(r"\d{4}-\d{2}-\d{2}", s)
+        return m.group(0) if m else s
+    try:
+        dt = dateparser.parse(s, fuzzy=True)
+        return dt.strftime("%Y-%m-%d")
+    except Exception:
+        return None
+
+
 def detect_ai_policy(text: str, extra_context: str = "") -> str:
-    """Very simple heuristic detector for AI restrictions."""
     hay = (text + "\n" + extra_context).lower()
     return "coach_only" if any(re.search(p, hay) for p in FORBID_PATTERNS) else "ok"
 
 
 def _coerce_json_from_claude(raw: str) -> Dict[str, Any]:
     """
-    Claude sometimes wraps JSON in ```json fences or adds prose.
-    Strip fences and pick the first {...} block.
+    Claude often wraps JSON in ```json fences or adds extra prose.
+    Strip fences and grab the first {...} block.
     """
     s = raw.strip()
+
     # Strip ``` / ```json fences if present
     if s.startswith("```"):
         lines = s.splitlines()
@@ -105,7 +108,6 @@ def _coerce_json_from_claude(raw: str) -> Dict[str, Any]:
             lines = lines[:-1]
         s = "\n".join(lines).strip()
 
-    # If still not starting with '{', try to grab the first JSON object
     if not s.lstrip().startswith("{"):
         m = re.search(r"\{.*\}", s, flags=re.S)
         if m:
@@ -115,7 +117,7 @@ def _coerce_json_from_claude(raw: str) -> Dict[str, Any]:
 
 
 # -------------------------------------------------------------------
-# User profile loader
+# User profile helper
 # -------------------------------------------------------------------
 
 try:
@@ -156,79 +158,26 @@ def _load_user_profile(user_id: str = "demo-user") -> Dict[str, Any]:
 
 
 # -------------------------------------------------------------------
-# Field extraction (Parse endpoint)
+# /parse: RAG + structured extraction
 # -------------------------------------------------------------------
 
-def _extract_fields_direct(page_text: str) -> Dict[str, Any]:
-    """
-    Call Claude directly (no RAG) to extract deadline, refs, values, ai_policy.
-    """
-    if client is None:
-        return {
-            "deadline": None,
-            "refs_required": None,
-            "values": [],
-            "ai_policy": detect_ai_policy(page_text),
-        }
-
-    SYSTEM = "You are a precise JSON-only parser for scholarship or job pages."
-    SCHEMA = """
-Return ONLY valid JSON:
-{
-  "deadline": string|null,           // YYYY-MM-DD if possible; else null
-  "refs_required": number|null,      // integer number of reference letters required, or null
-  "values": string[],                // e.g., ["creativity", "leadership"]
-  "ai_policy": "ok"|"coach_only"     // "coach_only" if the page forbids AI-generated content
-}
-"""
-    prompt = f"""You extract structured fields from THIS PAGE.
-If you are unsure about a field, use null or an empty list.
-No extra commentary, only JSON.
-
-PAGE TEXT (truncated):
-{page_text[:4000]}
-
-{SCHEMA}
-"""
-
-    try:
-        print("[llm] Calling Claude direct extractor for /parse")
-        resp = client.messages.create(
-            model=MODEL,
-            system=SYSTEM,
-            max_tokens=400,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        raw = resp.content[0].text if resp.content else "{}"
-        print("[llm] Claude direct extractor raw JSON (first 200 chars):", raw[:200])
-        data = _coerce_json_from_claude(raw)
-    except Exception as e:
-        print("[llm] Claude direct extractor error:", repr(e))
-        data = {
-            "deadline": None,
-            "refs_required": None,
-            "values": [],
-            "ai_policy": "ok",
-        }
-
-    data["deadline"] = normalize_date_like(data.get("deadline"))
-    if data.get("ai_policy") not in ("ok", "coach_only"):
-        data["ai_policy"] = detect_ai_policy(page_text)
-    data.setdefault("values", [])
-    data.setdefault("refs_required", None)
-    return data
-
-
 def extract_fields_rag_or_llm(
-    page_text: str, user_id: str = "demo-user"
+    page_text: str,
+    user_id: str = "demo-user",
 ) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
     """
-    Try RAG-based extraction (extension.rag.retriever.extract_fields_with_llm).
-    If that fails, fall back to direct Claude.
-    Always returns (fields_dict, sources_list).
+    Use RAG context + Claude to extract:
+      - deadline
+      - refs_required
+      - values
+      - ai_policy
+
+    Returns:
+      fields: dict
+      sources: list[ { source, snippet } ]
     """
-    # If no client at all, skip RAG entirely
     if client is None:
+        # Pure heuristic fallback (no API key)
         fields = {
             "deadline": None,
             "refs_required": None,
@@ -237,50 +186,104 @@ def extract_fields_rag_or_llm(
         }
         return fields, []
 
-    # First try RAG
+    # 1) Build RAG context from Chroma (sample pages + user memory)
+    context = ""
+    sources: List[Dict[str, Any]] = []
     try:
-        from extension.rag.retriever import extract_fields_with_llm as rag_extract  # type: ignore
+        from extension.rag.retriever import get_context_for_parse  # type: ignore
 
-        print("[llm] Using RAG extractor for /parse")
-        fields, sources = rag_extract(client, user_id, page_text)
-        fields["deadline"] = normalize_date_like(fields.get("deadline"))
-        if fields.get("ai_policy") not in ("ok", "coach_only"):
-            fields["ai_policy"] = detect_ai_policy(page_text)
-        fields.setdefault("values", [])
-        fields.setdefault("refs_required", None)
-        return fields, sources
+        context, sources = get_context_for_parse(page_text=page_text, user_id=user_id)
+        print("[llm] RAG context length for /parse:", len(context))
     except Exception as e:
-        print("[llm] RAG extractor failed, falling back to direct Claude:", repr(e))
+        print("[llm] RAG retrieval failed, falling back to page-only:", repr(e))
+        context, sources = "", []
 
-    # If RAG import / call failed, use direct extractor (no sources)
-    fields = _extract_fields_direct(page_text)
-    return fields, []
+    # 2) Single Claude call for JSON extraction (page_text + context)
+    SYSTEM = "You are a precise JSON-only parser for scholarship or job application pages."
+    SCHEMA = """
+Return ONLY valid JSON:
+{
+  "deadline": string|null,           // YYYY-MM-DD if possible; else null
+  "refs_required": number|null,      // number of reference letters required (0,1,2...), or null
+  "values": string[],                // e.g., ["creativity", "leadership"]
+  "ai_policy": "ok"|"coach_only"     // "coach_only" if the page forbids AI-generated content
+}
+"""
+
+    prompt = f"""You extract structured fields from THIS PAGE.
+
+Use BOTH:
+- PAGE TEXT: the raw text from the current page
+- CONTEXT: snippets from similar scholarship/job pages (may include example deadlines & rules)
+
+If you are unsure about any field, use null or an empty list.
+
+PAGE TEXT (truncated):
+{page_text[:4000]}
+
+CONTEXT (from related examples, may contain explicit deadlines & requirements):
+{context[:4000]}
+
+{SCHEMA}
+"""
+
+    try:
+        print("[llm] Calling Claude extractor for /parse")
+        resp = client.messages.create(
+            model=MODEL,
+            system=SYSTEM,
+            max_tokens=400,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = resp.content[0].text if resp.content else "{}"
+        print("[llm] Claude extractor raw JSON (first 200 chars):", raw[:200])
+        data = _coerce_json_from_claude(raw)
+    except Exception as e:
+        print("[llm] Claude extractor error (parse):", repr(e))
+        data = {
+            "deadline": None,
+            "refs_required": None,
+            "values": [],
+            "ai_policy": "ok",
+        }
+
+    # Normalize + sanity check
+    data["deadline"] = normalize_date_like(data.get("deadline"))
+    if data.get("ai_policy") not in ("ok", "coach_only"):
+        data["ai_policy"] = detect_ai_policy(page_text, context)
+    data.setdefault("values", [])
+    data.setdefault("refs_required", None)
+
+    return data, sources
 
 
 # -------------------------------------------------------------------
-# Plan generation (Plan endpoint)
+# /plan: micro-plan generation
 # -------------------------------------------------------------------
 
 def make_plan_with_llm(
-    goal: str, text: Optional[str] = None, user_id: str = "demo-user"
+    goal: str,
+    text: Optional[str] = None,
+    user_id: str = "demo-user",
 ) -> Dict[str, Any]:
     """
     Calls Claude to generate an ADHD-friendly micro plan.
-    Returns a dict shaped like PlanOut.
-    Falls back to a static plan if anything goes wrong or no API key.
+
+    - Uses parsed fields from extract_fields_rag_or_llm
+    - Uses user profile (tone, block length, history) for personalization
+    - Falls back to a static plan on failure
     """
-    # no key or no client → fallback
     if client is None:
         return FALLBACK_PLAN
 
     page_text = text or ""
     user_profile = _load_user_profile(user_id)
-    parsed_fields, _ = extract_fields_rag_or_llm(page_text=page_text, user_id=user_id)
+    parsed_fields, _sources = extract_fields_rag_or_llm(page_text=page_text, user_id=user_id)
 
     SYSTEM = (
         "You are an ADHD-friendly START-FIRST coach. "
-        "You create tiny, low-friction first steps and simple micro-plans that "
-        "help someone get unstuck with applications or writing tasks."
+        "You create tiny, low-friction first steps and simple micro-plans "
+        "that help someone get unstuck with scholarship or job applications."
     )
 
     schema_block = """
@@ -314,9 +317,9 @@ User profile:
 
 Instructions:
 - Design a micro-plan that is extremely easy to start.
-- Prefer a 15–25 minute time block.
+- Prefer a 15–25 minute time block unless the user profile says otherwise.
 - Make the micro_start concrete and action-oriented.
-- If ai_policy is "coach_only", allow the user to draft themselves and you only guide.
+- If ai_policy is "coach_only", assume the user writes content; you only guide.
 
 {schema_block}
 """
@@ -335,18 +338,24 @@ Instructions:
         print("[llm] Claude plan error:", repr(e))
         return FALLBACK_PLAN
 
-    # Ensure all keys exist; fill defaults where missing
+    # Merge with fallback & parsed fields
     out: Dict[str, Any] = dict(FALLBACK_PLAN)
-    out.update({k: data.get(k, v) for k, v in FALLBACK_PLAN.items()})
+    for k in FALLBACK_PLAN:
+        if k in data and data[k] is not None:
+            out[k] = data[k]
+
+    # Deadline: prefer plan's own; else parsed
     out["deadline"] = normalize_date_like(
         data.get("deadline") or parsed_fields.get("deadline")
     )
+
+    # ai_policy: prefer explicit, else parsed, else "ok"
     if data.get("ai_policy") in ("ok", "coach_only"):
         out["ai_policy"] = data["ai_policy"]
     else:
         out["ai_policy"] = parsed_fields.get("ai_policy", "ok")
 
-    # Make sure check_ins is a non-empty list
+    # Ensure non-empty check_ins
     if not out.get("check_ins"):
         out["check_ins"] = FALLBACK_PLAN["check_ins"]
 

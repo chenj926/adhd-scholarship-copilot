@@ -1,0 +1,28 @@
+{
+  "user_id": "demo-user",
+  "demographics": {
+    "timezone": "America/Toronto"
+  },
+  "program": "UofT Industrial Engineering",
+  "interests": [
+    "AI/ML"
+  ],
+  "preferences": {
+    "tone": "warm_direct",
+    "block_minutes": 20,
+    "checkins": [
+      "T+5",
+      "T+12"
+    ],
+    "coach_only_on_restricted": true
+  },
+  "history": {
+    "apps": [],
+    "wins": [],
+    "frictions": []
+  },
+  "weights": {
+    "source_penalty": {},
+    "nudge_success": {}
+  }
+}
