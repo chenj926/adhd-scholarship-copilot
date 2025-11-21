@@ -1,5 +1,7 @@
 import json
 from pathlib import Path
+import hashlib
+from datetime import datetime, timezone
 
 # Base directory: .../adhd_start/server
 BASE_DIR = Path(__file__).resolve().parent
@@ -70,3 +72,69 @@ def update_weight(user_id: str, table: str, key: str, factor: float):
     u["weights"][table][key] = u["weights"][table].get(key, 1.0) * factor
     save_user(u)
     return u
+
+
+# for bookmark stuff
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+def _mk_bookmark_id(url: str, ts: str) -> str:
+    h = hashlib.sha1((url + "|" + ts).encode("utf-8")).hexdigest()[:12]
+    return f"bm_{h}"
+
+def list_bookmarks(user_id: str):
+    u = get_user(user_id)
+    return u.get("history", {}).get("apps", [])
+
+def upsert_bookmark(
+    user_id: str,
+    url: str,
+    title: str | None = None,
+    source_site: str | None = None,
+    deadline: str | None = None,
+    tags: list[str] | None = None,
+):
+    u = get_user(user_id)
+    apps = u.setdefault("history", {}).setdefault("apps", [])
+    tags = tags or []
+
+    # update existing by URL (simple de-dupe)
+    for b in apps:
+        if b.get("url") == url:
+            b["title"] = title or b.get("title")
+            b["source_site"] = source_site or b.get("source_site")
+            b["deadline"] = deadline or b.get("deadline")
+            b["tags"] = sorted(set((b.get("tags") or []) + tags))
+            b["updated_at"] = _now_iso()
+            save_user(u)
+            return b
+
+    # create new
+    created_at = _now_iso()
+    bid = _mk_bookmark_id(url, created_at)
+    new_bm = {
+        "id": bid,
+        "url": url,
+        "title": title,
+        "source_site": source_site,
+        "status": "saved",
+        "deadline": deadline,
+        "tags": tags,
+        "created_at": created_at,
+        "updated_at": created_at,
+    }
+    apps.append(new_bm)
+    save_user(u)
+    return new_bm
+
+def set_bookmark_status(user_id: str, bookmark_id: str, status: str):
+    u = get_user(user_id)
+    apps = u.setdefault("history", {}).setdefault("apps", [])
+    for b in apps:
+        if b.get("id") == bookmark_id:
+            b["status"] = status
+            b["updated_at"] = _now_iso()
+            save_user(u)
+            return b
+    raise ValueError("bookmark_not_found")

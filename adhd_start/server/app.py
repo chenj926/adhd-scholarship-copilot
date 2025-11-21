@@ -4,11 +4,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Literal, Dict, Any
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List, Optional, Dict, Any
 
-# use our schemas (assumes these exist in server/schemas.py)
-from server.schemas import PlanIn, PlanOut, ParseIn, ParseOut
-
-# LLM helpers we already wired up
+from server.schemas import (
+    PlanIn, PlanOut, ParseIn, ParseOut,
+    BookmarkIn, BookmarkOut, BookmarkStatusIn
+)
 from server.llm import extract_fields_rag_or_llm, make_plan_with_llm
 
 app = FastAPI()
@@ -106,3 +110,32 @@ def feedback(payload: FeedbackIn):
     except Exception:
         # if user_repo isn't wired yet, don't crash the demo
         return {"ok": True, "adapted": False}
+    
+    
+@app.post("/bookmark", response_model=BookmarkOut)
+def add_or_update_bookmark(payload: BookmarkIn):
+    """Create/update a bookmark entry (de-dupes by URL per user)."""
+    from server.user_repo import upsert_bookmark  # type: ignore
+    bm = upsert_bookmark(
+        user_id=payload.user_id,
+        url=payload.url,
+        title=payload.title,
+        source_site=payload.source_site,
+        deadline=payload.deadline,
+        tags=payload.tags,
+    )
+    return BookmarkOut(**bm)
+
+@app.get("/bookmarks", response_model=List[BookmarkOut])
+def get_bookmarks(user_id: str = "demo-user"):
+    """List bookmarks for a user."""
+    from server.user_repo import list_bookmarks  # type: ignore
+    items = list_bookmarks(user_id)
+    return [BookmarkOut(**it) for it in items]
+
+@app.post("/bookmark/status", response_model=BookmarkOut)
+def update_bookmark_status(payload: BookmarkStatusIn):
+    """Update only the status of a bookmark."""
+    from server.user_repo import set_bookmark_status  # type: ignore
+    bm = set_bookmark_status(payload.user_id, payload.id, payload.status)
+    return BookmarkOut(**bm)
