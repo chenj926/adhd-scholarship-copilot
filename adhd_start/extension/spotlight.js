@@ -21,31 +21,20 @@
 
   // === UPDATE SPOTLIGHT REGION ===
   function updateSpotlight(e) {
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    if (!el) return;
+  const x = e.clientX;
+  const y = e.clientY;
+  const radius = 140;   // spotlight size
 
-    const rect = el.getBoundingClientRect();
+  overlay.style.background = `
+    radial-gradient(
+      circle ${radius}px at ${x}px ${y}px,
+      rgba(0,0,0,0) 0%,
+      rgba(0,0,0,0) 60%,
+      rgba(0,0,0,0.55) 100%
+    )
+  `;
+}
 
-    const padding = 8;
-    const top = rect.top - padding;
-    const left = rect.left - padding;
-    const width = rect.width + padding * 2;
-    const height = rect.height + padding * 2;
-
-    // Use CSS clip-path "hole" to reveal element
-    overlay.style.clipPath = `polygon(
-      0% 0%,
-      100% 0%,
-      100% 100%,
-      0% 100%,
-      0% 0%,
-      ${left}px ${top}px,
-      ${left + width}px ${top}px,
-      ${left + width}px ${top + height}px,
-      ${left}px ${top + height}px,
-      ${left}px ${top}px
-    )`;
-  }
 
   window.addEventListener("mousemove", updateSpotlight);
 
