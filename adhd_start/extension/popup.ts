@@ -1,7 +1,8 @@
 // popup.ts
 // @ts-nocheck
 
-// Types for the backend responses
+// ---------- Types used from backend ----------
+
 type PlanOut = {
   micro_start: string;
   block_minutes: number;
@@ -9,7 +10,7 @@ type PlanOut = {
   reentry_script: string;
   purpose: string;
   deadline: string | null;
-  ai_policy: "ok" | "coach_only";   // backend returns "ok" or "coach_only"
+  ai_policy: "ok" | "coach_only";
 };
 
 type ParseOut = {
@@ -20,15 +21,51 @@ type ParseOut = {
   confidence?: number | null;
 };
 
-// Simple helpers
+type EligibilityOut = {
+  eligible: boolean;
+  reasons: string[];
+  missing_info: string[];
+};
+
+// Shape of profile saved by profile.js
+type UserProfile = {
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  email?: string;
+
+  street1?: string;
+  street2?: string;
+  city?: string;
+  province?: string;
+  postal?: string;
+  country?: string;
+
+  citizen?: boolean;
+  pr?: boolean;
+  otherStatus?: boolean;
+
+  school?: string;
+  program?: string;
+  gradMonth?: string;
+  gradYear?: string;
+
+  [key: string]: any;
+};
+
+// ---------- Small helpers ----------
+
 const $ = <T extends HTMLElement>(sel: string) =>
   document.querySelector(sel) as T | null;
 
-const API_URL = "http://localhost:8000/plan";
-const PARSE_URL = "http://localhost:8000/parse";
-const BOOKMARK_URL = "http://localhost:8000/bookmark";
-const BOOKMARKS_URL = "http://localhost:8000/bookmarks?user_id=demo-user";
+const API_BASE = "http://127.0.0.1:8000";
+const API_URL = `${API_BASE}/plan`;
+const PARSE_URL = `${API_BASE}/parse`;
+const BOOKMARK_URL = `${API_BASE}/bookmark`;
+const BOOKMARKS_URL = `${API_BASE}/bookmarks?user_id=demo-user`;
+const ELIGIBILITY_URL = `${API_BASE}/eligibility`;
 const GOAL_DEFAULT = "Help me start this application";
+const PROFILE_PAGE_URL = chrome.runtime.getURL("profile.html");
 
 function escapeHtml(s: string) {
   return s
@@ -55,7 +92,7 @@ async function captureVisibleText(): Promise<string> {
   return (exec?.result as string) || "";
 }
 
-// --------------- PLAN ----------------
+// ---------- PLAN ----------
 
 async function requestPlan(goal: string, text: string): Promise<PlanOut> {
   const resp = await fetch(API_URL, {
@@ -111,12 +148,12 @@ async function onClickPlan() {
     renderPlan(result, data);
     startBlock(data.block_minutes, data.check_ins);
   } catch (err: any) {
-    result.textContent = err?.message || "Something went wrong.";
     console.error(err);
+    result.textContent = err?.message || "Something went wrong.";
   }
 }
 
-// --------------- PARSE / REQUIREMENTS ----------------
+// ---------- PARSE / REQUIREMENTS ----------
 
 async function requestParse(text: string): Promise<ParseOut> {
   const resp = await fetch(PARSE_URL, {
@@ -157,7 +194,17 @@ function renderReqs(container: HTMLElement, data: ParseOut) {
     (conf ? `<div class="muted" style="margin-top:4px">Confidence${conf}</div>` : "");
 }
 
-// --------------- BOOKMARKS / SAVE & LIST ----------------
+// ---------- PROFILE LOADER (chrome.storage) ----------
+
+function getProfileFromStorage(): Promise<UserProfile | null> {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get("userProfile", (res) => {
+      resolve((res.userProfile as UserProfile) || null);
+    });
+  });
+}
+
+// ---------- BOOKMARKS: SAVE & LIST ----------
 
 async function saveCurrentPage() {
   const statusEl = document.getElementById("save-status") as HTMLElement | null;
@@ -238,18 +285,333 @@ async function onShowSaved() {
   }
 }
 
-// --------------- MAIN ----------------
+// ---------- FOCUS MODE (circle / rect / none) ----------
+
+async function setFocusMode(mode: "none" | "circle" | "rect") {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !tab.id) return;
+
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (mode) => {
+      (function (mode) {
+        const w = window as any;
+
+        function cleanup() {
+          if (w.__adhdSpotlightEl) {
+            w.__adhdSpotlightEl.remove();
+            w.__adhdSpotlightEl = null;
+          }
+          if (w.__adhdSpotlightMoveHandler) {
+            window.removeEventListener("mousemove", w.__adhdSpotlightMoveHandler);
+            w.__adhdSpotlightMoveHandler = null;
+          }
+          if (w.__adhdSpotlightKeyHandler) {
+            window.removeEventListener("keydown", w.__adhdSpotlightKeyHandler);
+            w.__adhdSpotlightKeyHandler = null;
+          }
+          w.__adhdSpotlightMode = "none";
+        }
+
+        if (mode === "none") {
+          cleanup();
+          return;
+        }
+
+        if (!w.__adhdSpotlightEl) {
+          const sp = document.createElement("div");
+          Object.assign(sp.style, {
+            position: "fixed",
+            top: "0px",
+            left: "0px",
+            width: "0px",
+            height: "0px",
+            pointerEvents: "none",
+            zIndex: "999999999",
+            boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)",
+            transition:
+              "top 0.08s ease-out, left 0.08s ease-out, width 0.08s ease-out, height 0.08s ease-out",
+          });
+          document.body.appendChild(sp);
+          w.__adhdSpotlightEl = sp;
+
+          w.__adhdSpotlightMoveHandler = function (e: MouseEvent) {
+            const spEl = w.__adhdSpotlightEl as HTMLDivElement | null;
+            if (!spEl || w.__adhdSpotlightMode === "none") return;
+
+            let width: number, height: number, radius: string;
+            if (w.__adhdSpotlightMode === "circle") {
+              width = height = 240;
+              radius = "50%";
+            } else {
+              width = 320;
+              height = 190;
+              radius = "18px";
+            }
+
+            const x = e.clientX - width / 2;
+            const y = e.clientY - height / 2;
+
+            spEl.style.width = width + "px";
+            spEl.style.height = height + "px";
+            spEl.style.borderRadius = radius;
+            spEl.style.left = x + "px";
+            spEl.style.top = y + "px";
+          };
+          window.addEventListener("mousemove", w.__adhdSpotlightMoveHandler);
+
+          w.__adhdSpotlightKeyHandler = function (e: KeyboardEvent) {
+            if (e.key === "Escape") {
+              cleanup();
+            }
+          };
+          window.addEventListener("keydown", w.__adhdSpotlightKeyHandler);
+        }
+
+        w.__adhdSpotlightMode = mode;
+      })(mode);
+    },
+    args: [mode],
+  });
+}
+
+// ---------- ELIGIBILITY ----------
+
+async function requestEligibility(
+  pageText: string,
+  profile: UserProfile
+): Promise<EligibilityOut> {
+  const resp = await fetch(ELIGIBILITY_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: "demo-user",
+      profile,
+      text: pageText,
+    }),
+  });
+  if (!resp.ok) {
+    throw new Error(`Eligibility error (HTTP ${resp.status})`);
+  }
+  return (await resp.json()) as EligibilityOut;
+}
+
+function renderEligibility(container: HTMLElement, data: EligibilityOut) {
+  const icon = data.eligible ? "✅" : "❌";
+  const headline = data.eligible
+    ? "You appear ELIGIBLE for this scholarship."
+    : "You likely are NOT eligible for this scholarship.";
+
+  const reasonsHtml = (data.reasons || [])
+    .map((r) => `<li>${escapeHtml(r)}</li>`)
+    .join("");
+
+  const missingHtml = (data.missing_info || [])
+    .map((m) => `<li>${escapeHtml(m)}</li>`)
+    .join("");
+
+  container.innerHTML =
+    `<div><b>${icon} ${headline}</b></div>` +
+    (reasonsHtml
+      ? `<div style="margin-top:4px;"><b>Why:</b><ul style="margin:4px 0 0 16px">${reasonsHtml}</ul></div>`
+      : "") +
+    (missingHtml
+      ? `<div style="margin-top:4px;"><b>Missing / unclear:</b><ul style="margin:4px 0 0 16px">${missingHtml}</ul></div>`
+      : "");
+}
+
+async function onCheckEligibility() {
+  const status = document.getElementById("elig-status");
+  const out = document.getElementById("elig-out");
+  if (status) status.textContent = "Checking eligibility…";
+  if (out) out.innerHTML = "";
+
+  try {
+    const [pageText, profile] = await Promise.all([
+      captureVisibleText(),
+      getProfileFromStorage(),
+    ]);
+
+    if (!profile) {
+      if (status) {
+        status.textContent =
+          "No profile found. Click Profile, fill it out, and save first.";
+      }
+      return;
+    }
+
+    const result = await requestEligibility(pageText, profile);
+    if (status) status.textContent = "";
+    if (out) renderEligibility(out as HTMLElement, result);
+  } catch (err: any) {
+    console.error(err);
+    if (status) status.textContent =
+      err?.message || "Could not check eligibility.";
+  }
+}
+
+// ---------- AUTOFILL FROM PROFILE ----------
+
+async function autofillFormFromProfile() {
+  const statusEl = document.getElementById("autofill-status");
+  if (statusEl) statusEl.textContent = "Autofilling…";
+
+  try {
+    const profile = await getProfileFromStorage();
+    if (!profile) {
+      if (statusEl) {
+        statusEl.textContent =
+          "No profile found. Click Profile, fill it out, and save first.";
+      }
+      return;
+    }
+
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab || !tab.id) throw new Error("No active tab");
+
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      args: [profile],
+      func: (profile: UserProfile) => {
+        const lower = (s: string | undefined) => (s || "").toLowerCase();
+
+        function labelTextFor(el: HTMLElement): string {
+          if (!el) return "";
+          if ((el as any).id) {
+            const byFor = document.querySelector(
+              `label[for="${(el as any).id}"]`
+            ) as HTMLLabelElement | null;
+            if (byFor) return byFor.innerText.trim();
+          }
+          const parentLabel = el.closest("label");
+          if (parentLabel) return parentLabel.innerText.trim();
+          return "";
+        }
+
+        function matches(el: HTMLInputElement | HTMLTextAreaElement, ...keywords: string[]) {
+          const texts = [
+            (el as any).name,
+            (el as any).id,
+            (el as any).placeholder,
+            el.getAttribute("aria-label"),
+            labelTextFor(el),
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          return keywords.every((kw) => texts.includes(kw.toLowerCase()));
+        }
+
+        function fillText(value: string | undefined, ...keywords: string[]) {
+          if (!value) return;
+          const inputs = Array.from(
+            document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+              "input[type='text'], input:not([type]), textarea"
+            )
+          );
+          for (const el of inputs) {
+            if (matches(el, ...keywords)) {
+              el.value = value;
+              el.dispatchEvent(new Event("input", { bubbles: true }));
+              el.dispatchEvent(new Event("change", { bubbles: true }));
+              break;
+            }
+          }
+        }
+
+        // Names, email
+        fillText(profile.firstName, "first", "name");
+        fillText(profile.middleName, "middle", "name");
+        fillText(profile.lastName, "last", "name");
+        fillText(profile.email, "email");
+
+        // Address
+        fillText(profile.street1, "address");
+        fillText(profile.street2, "address", "line 2");
+        fillText(profile.city, "city");
+        fillText(profile.province, "province");
+        fillText(profile.postal, "postal");
+        fillText(profile.country, "country");
+
+        // School / program
+        fillText(profile.school, "school");
+        fillText(profile.school, "university");
+        fillText(profile.program, "program", "study");
+        fillText(profile.program, "program");
+        fillText(profile.program, "field", "study");
+
+        // Grad info
+        const gradString = `${profile.gradMonth || ""} ${profile.gradYear || ""}`.trim();
+        if (gradString) {
+          fillText(gradString, "graduation");
+          fillText(gradString, "expected", "completion");
+          fillText(gradString, "grad", "date");
+        }
+
+        // Canadian citizen radios
+        if (profile.citizen) {
+          const radios = Array.from(
+            document.querySelectorAll<HTMLInputElement>("input[type='radio']")
+          );
+          for (const r of radios) {
+            const lbl = labelTextFor(r);
+            const lt = lbl.toLowerCase();
+            const v = (r.value || "").toLowerCase();
+
+            const questionText =
+              r
+                .closest("div")
+                ?.innerText.toLowerCase() || "";
+
+            const mentionsCitizen =
+              lt.includes("canadian citizen") ||
+              questionText.includes("canadian citizen");
+
+            if (!mentionsCitizen) continue;
+
+            const looksLikeYes =
+              v === "yes" ||
+              lt === "yes" ||
+              lt.includes("yes");
+
+            if (looksLikeYes) {
+              r.checked = true;
+              r.click();
+            }
+          }
+        }
+      },
+    });
+
+    if (statusEl) statusEl.textContent = "Autofilled basic fields ✔";
+  } catch (err: any) {
+    console.error("Autofill failed", err);
+    if (statusEl) {
+      statusEl.textContent = err?.message || "Autofill failed.";
+    }
+  }
+}
+
+// ---------- MAIN (wire up buttons) ----------
 
 function main() {
   console.log("popup loaded");
 
-  const btn = $("#plan") as HTMLButtonElement | null;
-  if (btn) {
-    btn.addEventListener("click", onClickPlan);
-  } else {
-    console.error("No #plan button found in popup.html");
+  // Plan
+  const planBtn = $("#plan") as HTMLButtonElement | null;
+  if (planBtn) {
+    planBtn.addEventListener("click", onClickPlan);
   }
 
+  // Profile
+  const profileBtn = $("#open-profile") as HTMLButtonElement | null;
+  if (profileBtn) {
+    profileBtn.addEventListener("click", () => {
+      chrome.tabs.create({ url: PROFILE_PAGE_URL });
+    });
+  }
+
+  // Requirements scan
   const scanBtn = document.getElementById("btn-scan") as HTMLButtonElement | null;
   if (scanBtn) {
     scanBtn.addEventListener("click", async () => {
@@ -271,6 +633,7 @@ function main() {
     });
   }
 
+  // Save bookmark
   const saveBtn = document.getElementById("btn-save") as HTMLButtonElement | null;
   if (saveBtn) {
     saveBtn.addEventListener("click", () => {
@@ -278,12 +641,158 @@ function main() {
     });
   }
 
+  // Show saved bookmarks
   const showSavedBtn = document.getElementById("btn-show-saved") as HTMLButtonElement | null;
   if (showSavedBtn) {
     showSavedBtn.addEventListener("click", () => {
       onShowSaved();
     });
   }
+
+  // Eligibility
+  const eligBtn = document.getElementById("btn-check-elig") as HTMLButtonElement | null;
+  if (eligBtn) {
+    eligBtn.addEventListener("click", () => {
+      onCheckEligibility();
+    });
+  }
+
+  // Autofill
+  const autofillBtn = document.getElementById("btn-autofill") as HTMLButtonElement | null;
+  if (autofillBtn) {
+    autofillBtn.addEventListener("click", () => {
+      autofillFormFromProfile();
+    });
+  }
+
+  // Focus buttons
+  const focusNone = document.getElementById("focusNone") as HTMLButtonElement | null;
+  if (focusNone) focusNone.addEventListener("click", () => setFocusMode("none"));
+
+  const focusCircle = document.getElementById("focusCircle") as HTMLButtonElement | null;
+  if (focusCircle) focusCircle.addEventListener("click", () => setFocusMode("circle"));
+
+  const focusRect = document.getElementById("focusRect") as HTMLButtonElement | null;
+  if (focusRect) focusRect.addEventListener("click", () => setFocusMode("rect"));
 }
 
 document.addEventListener("DOMContentLoaded", main);
+
+// ---------- Scholarship Library (using /scholarships) ----------
+
+(() => {
+  const searchInput = document.getElementById("library-search") as HTMLInputElement | null;
+  const loadBtn = document.getElementById("btn-load-library") as HTMLButtonElement | null;
+  const statusEl = document.getElementById("library-status") as HTMLElement | null;
+  const listEl = document.getElementById("library-list") as HTMLElement | null;
+  const detailEl = document.getElementById("library-detail") as HTMLElement | null;
+
+  if (!loadBtn || !listEl || !detailEl || !statusEl) {
+    return;
+  }
+
+  async function loadScholarships(query: string) {
+    try {
+      statusEl.textContent = "Loading scholarships...";
+      listEl.innerHTML = "";
+      detailEl.innerHTML = "";
+
+      const params = new URLSearchParams();
+      if (query && query.trim()) {
+        params.set("q", query.trim());
+      }
+
+      const url =
+        params.toString().length > 0
+          ? `${API_BASE}/scholarships?${params.toString()}`
+          : `${API_BASE}/scholarships`;
+
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      if (!Array.isArray(data) || data.length === 0) {
+        statusEl.textContent =
+          "No scholarships found yet. Try a different search or add more URLs.";
+        return;
+      }
+
+      statusEl.textContent = `Showing ${data.length} scholarship page(s). Click one to see details.`;
+      listEl.innerHTML = "";
+
+      data.forEach((sch: any) => {
+        const item = document.createElement("div");
+        item.style.padding = "4px 0";
+        item.style.borderBottom = "1px solid #eee";
+        item.style.cursor = "pointer";
+
+        const title = document.createElement("div");
+        title.textContent = sch.title || "Untitled scholarship page";
+        title.style.fontWeight = "600";
+        title.style.fontSize = "13px";
+
+        const meta = document.createElement("div");
+        meta.textContent = sch.source_site || "";
+        meta.className = "muted";
+
+        item.appendChild(title);
+        item.appendChild(meta);
+
+        item.addEventListener("click", () => {
+          renderDetail(sch);
+        });
+
+        listEl.appendChild(item);
+      });
+
+      renderDetail(data[0]);
+    } catch (err) {
+      console.error("Error loading scholarships", err);
+      statusEl.textContent =
+        "Error loading scholarships. Is the backend running on http://127.0.0.1:8000?";
+    }
+  }
+
+  function renderDetail(sch: any) {
+    if (!sch) {
+      detailEl.innerHTML = "";
+      return;
+    }
+
+    const desc = sch.description_short || "";
+    const shortened = desc.length > 600 ? desc.slice(0, 600) + "…" : desc;
+
+    detailEl.innerHTML = `
+      <div style="border-top:1px solid #eee; padding-top:6px;">
+        <div style="font-weight:600; margin-bottom:4px;">
+          ${sch.title || "Untitled scholarship page"}
+        </div>
+        <div class="muted" style="margin-bottom:4px;">
+          Source: ${sch.source_site || ""}
+        </div>
+        <div style="margin-bottom:6px; white-space:pre-wrap;">
+          ${shortened}
+        </div>
+        <a href="${sch.source_url}" target="_blank">
+          Open official page
+        </a>
+      </div>
+    `;
+  }
+
+  loadBtn.addEventListener("click", () => {
+    const q = searchInput ? searchInput.value : "";
+    loadScholarships(q);
+  });
+
+  if (searchInput) {
+    searchInput.addEventListener("keydown", (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        loadBtn.click();
+      }
+    });
+  }
+})();
