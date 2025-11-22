@@ -8,6 +8,7 @@ const PARSE_URL = "http://localhost:8000/parse";
 const BOOKMARK_URL = "http://localhost:8000/bookmark";
 const BOOKMARKS_URL = "http://localhost:8000/bookmarks?user_id=demo-user";
 const GOAL_DEFAULT = "Help me start this application";
+const PROFILE_PAGE_URL = chrome.runtime.getURL("profile.html");
 
 function escapeHtml(s) {
   return s
@@ -326,7 +327,16 @@ function main() {
     planBtn.addEventListener("click", onClickPlan);
   }
 
-  // Wire Scan / Parse button (already in your code)
+  // Open profile page in a new tab when the Profile button is clicked
+  const profileBtn = $("#open-profile");
+  if (profileBtn) {
+    profileBtn.addEventListener("click", () => {
+      chrome.tabs.create({ url: PROFILE_PAGE_URL });
+    });
+  }
+
+
+  // Wire Scan / Parse button
   const scanBtn = document.getElementById("btn-scan");
   if (scanBtn) {
     scanBtn.addEventListener("click", async () => {
