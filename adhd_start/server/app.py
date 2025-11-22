@@ -15,6 +15,15 @@ from server.schemas import (
 )
 from server.llm import extract_fields_rag_or_llm, make_plan_with_llm
 
+
+
+from typing import List, Optional
+from fastapi import FastAPI, HTTPException, Query
+
+from .scholarship_models import Scholarship
+from .scholarship_repo import scholarship_repo
+
+
 app = FastAPI()
 
 # allow calls from your chrome extension / localhost
@@ -139,3 +148,36 @@ def update_bookmark_status(payload: BookmarkStatusIn):
     from server.user_repo import set_bookmark_status  # type: ignore
     bm = set_bookmark_status(payload.user_id, payload.id, payload.status)
     return BookmarkOut(**bm)
+
+# List scholarships with optional filters
+@app.get("/scholarships", response_model=List[Scholarship])
+def list_scholarships(
+    q: Optional[str] = Query(default=None, description="Full-text search query"),
+    source_site: Optional[str] = Query(default=None, description="Filter by source site"),
+    level_of_study: Optional[str] = Query(default=None, description="Filter by level of study"),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+):
+    """
+    Return a list of scholarships from your curated JSON file.
+    """
+    return scholarship_repo.list(
+        q=q,
+        source_site=source_site,
+        level_of_study=level_of_study,
+        limit=limit,
+        offset=offset,
+    )
+
+
+# Get full details for a single scholarship
+@app.get("/scholarships/{scholarship_id}", response_model=Scholarship)
+def get_scholarship(scholarship_id: str):
+    """
+    Get details (including winner stories) for a single scholarship.
+    """
+    sch = scholarship_repo.get(scholarship_id)
+    if not sch:
+        raise HTTPException(status_code=404, detail="Scholarship not found")
+    return sch
+

@@ -392,3 +392,129 @@ function main() {
 }
 
 document.addEventListener("DOMContentLoaded", main);
+// -------- Scholarship Library (backend /scholarships) --------
+(() => {
+  const API_BASE = "http://127.0.0.1:8000"; // backend you showed in your screenshot
+
+  function $(id) {
+    return document.getElementById(id);
+  }
+
+  const searchInput = $("library-search");
+  const loadBtn = $("btn-load-library");
+  const statusEl = $("library-status");
+  const listEl = $("library-list");
+  const detailEl = $("library-detail");
+
+  // If popup.html is older / missing elements, bail quietly
+  if (!loadBtn || !listEl || !detailEl || !statusEl) {
+    return;
+  }
+
+  async function loadScholarships(query) {
+    try {
+      statusEl.textContent = "Loading scholarships...";
+      listEl.innerHTML = "";
+      detailEl.innerHTML = "";
+
+      const params = new URLSearchParams();
+      if (query && query.trim()) {
+        params.set("q", query.trim());
+      }
+
+      const url =
+        params.toString().length > 0
+          ? `${API_BASE}/scholarships?${params.toString()}`
+          : `${API_BASE}/scholarships`;
+
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      if (!Array.isArray(data) || data.length === 0) {
+        statusEl.textContent =
+          "No scholarships found yet. Try a different search or add more URLs.";
+        return;
+      }
+
+      statusEl.textContent = `Showing ${data.length} scholarship page(s). Click one to see details.`;
+      listEl.innerHTML = "";
+
+      data.forEach((sch) => {
+        const item = document.createElement("div");
+        item.style.padding = "4px 0";
+        item.style.borderBottom = "1px solid #eee";
+        item.style.cursor = "pointer";
+
+        const title = document.createElement("div");
+        title.textContent = sch.title || "Untitled scholarship page";
+        title.style.fontWeight = "600";
+        title.style.fontSize = "13px";
+
+        const meta = document.createElement("div");
+        meta.textContent = sch.source_site || "";
+        meta.className = "muted";
+
+        item.appendChild(title);
+        item.appendChild(meta);
+
+        item.addEventListener("click", () => {
+          renderDetail(sch);
+        });
+
+        listEl.appendChild(item);
+      });
+
+      // auto-select first
+      renderDetail(data[0]);
+    } catch (err) {
+      console.error("Error loading scholarships", err);
+      statusEl.textContent =
+        "Error loading scholarships. Is the backend running on http://127.0.0.1:8000?";
+    }
+  }
+
+  function renderDetail(sch) {
+    if (!sch) {
+      detailEl.innerHTML = "";
+      return;
+    }
+
+    const desc = sch.description_short || "";
+    const shortened =
+      desc.length > 600 ? desc.slice(0, 600) + "…" : desc;
+
+    detailEl.innerHTML = `
+      <div style="border-top:1px solid #eee; padding-top:6px;">
+        <div style="font-weight:600; margin-bottom:4px;">
+          ${sch.title || "Untitled scholarship page"}
+        </div>
+        <div class="muted" style="margin-bottom:4px;">
+          Source: ${sch.source_site || ""}
+        </div>
+        <div style="margin-bottom:6px; white-space:pre-wrap;">
+          ${shortened}
+        </div>
+        <a href="${sch.source_url}" target="_blank">
+          Open official page
+        </a>
+      </div>
+    `;
+  }
+
+  loadBtn.addEventListener("click", () => {
+    const q = searchInput ? searchInput.value : "";
+    loadScholarships(q);
+  });
+
+  if (searchInput) {
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        loadBtn.click();
+      }
+    });
+  }
+})();
