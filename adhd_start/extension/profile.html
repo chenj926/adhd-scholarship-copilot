@@ -1,71 +1,266 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Your Profile — Start-to-Act</title>
-  <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      margin: 16px auto;
-      max-width: 480px;
-      padding: 0 12px;
-    }
-    h2 { margin-bottom: 4px; }
-    p.subtitle { color: #666; margin-top: 0; }
-    label { display: block; margin-top: 12px; font-weight: 500; }
-    input, textarea {
-      width: 100%;
-      padding: 8px;
-      margin-top: 4px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      box-sizing: border-box;
-      font: inherit;
-    }
-    button {
-      margin-top: 16px;
-      padding: 8px 14px;
-      border-radius: 999px;
-      border: none;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    #save-btn {
-    background: #151a3b;
-    color: #fff;
-    margin-right: 8px;
-    }
-    #clear-btn {
-        background: #eee;
-    }
-    #status {
-      margin-top: 10px;
-      font-size: 13px;
-      color: #2f855a;
-      min-height: 18px;
-    }
-  </style>
+  <title>My Profile – Start-to-Act</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="profile.css" />
 </head>
 <body>
-  <h2>Your Profile</h2>
-  <p class="subtitle">Update your basic information used by the extension.</p>
+  <main class="page">
+    <header class="page-header">
+      <h1>Profile</h1>
+      <p class="page-subtitle">
+        This information stays on your device and is used to auto-fill applications.
+      </p>
+    </header>
 
-  <form id="profile-form">
-    <label for="name">Name</label>
-    <input id="name" type="text" placeholder="Your name" />
+    <form id="profile-form">
+      <!-- Basic Info -->
+      <section class="card">
+        <h2>Basic Information</h2>
 
-    <label for="email">Email</label>
-    <input id="email" type="email" placeholder="you@example.com" />
+        <div class="grid grid-3">
+          <div class="field">
+            <label for="firstName">First name<span class="required">*</span></label>
+            <input id="firstName" name="firstName" type="text" required />
+          </div>
 
-    <label for="resumeUrl">Resume</label>
-    <input id="resumeUrl" type="url" placeholder="Link to your resume (e.g., Google Drive, PDF)" />
+          <div class="field">
+            <label for="middleName">Middle name (optional)</label>
+            <input id="middleName" name="middleName" type="text" />
+          </div>
 
-    <button id="save-btn" type="submit">Save Profile</button>
-    <button id="clear-btn" type="button">Clear Profile</button>
-  </form>
+          <div class="field">
+            <label for="lastName">Last name<span class="required">*</span></label>
+            <input id="lastName" name="lastName" type="text" required />
+          </div>
+        </div>
 
-  <div id="status"></div>
+        <div class="field">
+          <label for="email">Email<span class="required">*</span></label>
+          <input id="email" name="email" type="email" required />
+        </div>
+      </section>
 
-  <script src="profile.js"></script>
+      <!-- Address -->
+      <section class="card">
+        <h2>Address</h2>
+
+        <div class="field">
+          <label for="street1">Street address 1<span class="required">*</span></label>
+          <input id="street1" name="street1" type="text" required />
+        </div>
+
+        <div class="field">
+          <label for="street2">Street address 2 (optional)</label>
+          <input id="street2" name="street2" type="text" />
+        </div>
+
+        <div class="grid grid-2">
+          <div class="field">
+            <label for="city">City<span class="required">*</span></label>
+            <input id="city" name="city" type="text" required />
+          </div>
+
+          <div class="field">
+            <label for="province">Province / State<span class="required">*</span></label>
+            <input id="province" name="province" type="text" required />
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="field">
+            <label for="postalCode">Postal code<span class="required">*</span></label>
+            <input id="postalCode" name="postalCode" type="text" required />
+          </div>
+
+          <div class="field">
+            <label for="country">Country<span class="required">*</span></label>
+            <input id="country" name="country" type="text" required />
+          </div>
+        </div>
+      </section>
+
+      <!-- Status -->
+      <section class="card">
+        <h2>Residency Status</h2>
+        <p class="hint">Check all that apply.</p>
+        <div class="grid grid-3">
+          <label class="checkbox">
+            <input id="citizen" name="citizen" type="checkbox" />
+            <span>Canadian citizen</span>
+          </label>
+
+          <label class="checkbox">
+            <input id="pr" name="pr" type="checkbox" />
+            <span>Canada PR</span>
+          </label>
+
+          <label class="checkbox">
+            <input id="otherStatus" name="otherStatus" type="checkbox" />
+            <span>Other / international</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Education -->
+      <section class="card">
+        <h2>Education</h2>
+
+        <div class="field">
+          <label for="school">School<span class="required">*</span></label>
+          <input id="school" name="school" type="text" required />
+        </div>
+
+        <div class="field">
+          <label for="program">Program of study<span class="required">*</span></label>
+          <input id="program" name="program" type="text" required />
+        </div>
+
+        <div class="grid grid-2">
+          <div class="field">
+            <label for="yearsCompleted">Years completed<span class="required">*</span></label>
+            <input
+              id="yearsCompleted"
+              name="yearsCompleted"
+              type="number"
+              min="0"
+              step="0.5"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label for="expectedCompletion">Expected date of completion<span class="required">*</span></label>
+            <input
+              id="expectedCompletion"
+              name="expectedCompletion"
+              type="date"
+              required
+            />
+          </div>
+        </div>
+      </section>
+
+            <!-- Resume / Activities -->
+      <section class="card">
+        <h2>Resume</h2>
+        <p class="hint">
+          Summarize your key activities, experiences, and skills. This can be reused
+          when filling out applications.
+        </p>
+
+        <div class="field">
+          <label for="resumeSummary">Activity Summary</label>
+          <textarea
+            id="resumeSummary"
+            name="resumeSummary"
+            rows="6"
+            placeholder="E.g. leadership roles, internships, projects, volunteering, awards..."
+          ></textarea>
+        </div>
+      </section>
+
+      <!-- References -->
+      <section class="card">
+        <h2>References</h2>
+        <p class="hint">Up to 3 references. Supporting letter can be a short note or link.</p>
+
+        <!-- Reference 1 -->
+        <div class="ref-block">
+          <h3>Reference 1</h3>
+          <div class="grid grid-3">
+            <div class="field">
+              <label for="ref1First">First name</label>
+              <input id="ref1First" name="ref1First" type="text" />
+            </div>
+            <div class="field">
+              <label for="ref1Last">Last name</label>
+              <input id="ref1Last" name="ref1Last" type="text" />
+            </div>
+            <div class="field">
+              <label for="ref1Title">Title / Relationship</label>
+              <input id="ref1Title" name="ref1Title" type="text" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="ref1Letter">Supporting letter / notes / URL</label>
+            <textarea
+              id="ref1Letter"
+              name="ref1Letter"
+              rows="3"
+              placeholder="Paste summary, link, or notes about this reference."
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Reference 2 -->
+        <div class="ref-block">
+          <h3>Reference 2</h3>
+          <div class="grid grid-3">
+            <div class="field">
+              <label for="ref2First">First name</label>
+              <input id="ref2First" name="ref2First" type="text" />
+            </div>
+            <div class="field">
+              <label for="ref2Last">Last name</label>
+              <input id="ref2Last" name="ref2Last" type="text" />
+            </div>
+            <div class="field">
+              <label for="ref2Title">Title / Relationship</label>
+              <input id="ref2Title" name="ref2Title" type="text" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="ref2Letter">Supporting letter / notes / URL</label>
+            <textarea
+              id="ref2Letter"
+              name="ref2Letter"
+              rows="3"
+              placeholder="Paste summary, link, or notes about this reference."
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Reference 3 -->
+        <div class="ref-block">
+          <h3>Reference 3</h3>
+          <div class="grid grid-3">
+            <div class="field">
+              <label for="ref3First">First name</label>
+              <input id="ref3First" name="ref3First" type="text" />
+            </div>
+            <div class="field">
+              <label for="ref3Last">Last name</label>
+              <input id="ref3Last" name="ref3Last" type="text" />
+            </div>
+            <div class="field">
+              <label for="ref3Title">Title / Relationship</label>
+              <input id="ref3Title" name="ref3Title" type="text" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="ref3Letter">Supporting letter / notes / URL</label>
+            <textarea
+              id="ref3Letter"
+              name="ref3Letter"
+              rows="3"
+              placeholder="Paste summary, link, or notes about this reference."
+            ></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- Actions -->
+      <section class="actions">
+        <button type="submit" id="saveBtn">Save profile</button>
+        <button type="button" id="resetBtn" class="secondary">Clear saved data</button>
+        <span id="status" class="status" aria-live="polite"></span>
+      </section>
+    </form>
+  </main>
+
+  <script src="profile.js" defer></script>
 </body>
 </html>
