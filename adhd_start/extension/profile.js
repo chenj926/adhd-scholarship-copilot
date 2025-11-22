@@ -121,28 +121,53 @@ async function loadProfile() {
   }
 }
 
-async function saveProfile(event) {
-  event.preventDefault();
+async function saveProfile() {
+  const firstName = document.getElementById("firstName").value;
+  const middleName = document.getElementById("middleName").value;
+  const lastName = document.getElementById("lastName").value;
+  const email = document.getElementById("email").value;
 
-  if (!form.reportValidity()) {
-    setStatus("Please fill in required fields.", "error");
-    return;
-  }
+  const street1 = document.getElementById("street1").value;
+  const street2 = document.getElementById("street2").value;
+  const city = document.getElementById("city").value;
+  const province = document.getElementById("province").value;
+  const postal = document.getElementById("postal").value;
+  const country = document.getElementById("country").value;
 
-  const data = readForm();
+  const citizen = document.getElementById("citizen").checked;
+  const pr = document.getElementById("pr").checked;
+  const otherStatus = document.getElementById("otherStatus").checked;
 
-  try {
-    saveBtn.disabled = true;
-    setStatus("Saving…");
-    await chrome.storage.sync.set({ [STORAGE_KEY]: data });
-    setStatus("Profile saved.", "success");
-  } catch (err) {
-    console.error("Failed to save profile", err);
-    setStatus("Error saving profile.", "error");
-  } finally {
-    saveBtn.disabled = false;
-  }
+  const school = document.getElementById("school").value;
+  const program = document.getElementById("program").value;
+  const gradMonth = document.getElementById("gradMonth").value;
+  const gradYear = document.getElementById("gradYear").value;
+
+  const profile = {
+    firstName,
+    middleName,
+    lastName,
+    email,
+    street1,
+    street2,
+    city,
+    province,
+    postal,
+    country,
+    citizen,
+    pr,
+    otherStatus,
+    school,
+    program,
+    gradMonth,
+    gradYear
+  };
+
+  chrome.storage.sync.set({ userProfile: profile }, () => {
+    alert("Profile saved successfully!");
+  });
 }
+
 
 async function clearProfile() {
   const confirmed = confirm("Are you sure you want to clear your saved profile? This cannot be undone.");

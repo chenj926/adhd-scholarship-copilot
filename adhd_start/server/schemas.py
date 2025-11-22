@@ -58,3 +58,18 @@ class BookmarkOut(BaseModel):
     tags: list[str] = Field(default_factory=list)
     created_at: str
     updated_at: str
+    
+class EligibilityIn(BaseModel):
+    """
+    Payload from the extension to check if a user is eligible
+    for a scholarship based on the page text + stored profile.
+    """
+    user_id: str = "demo-user"
+    profile: Dict[str, Any]   # whatever profile.html stores
+    text: str                 # scholarship page text (innerText)
+
+
+class EligibilityOut(BaseModel):
+    eligible: bool
+    reasons: List[str]
+    missing_info: List[str] = Field(default_factory=list)

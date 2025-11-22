@@ -73,46 +73,54 @@
   <div id="req-status" class="muted" style="margin-top:6px;"></div>
   <div id="req-out" style="margin-top:6px;"></div>
 
+    <!-- ⭐ ELIGIBILITY CHECK ⭐ -->
+    <hr style="margin:12px 0" />
+    <h4>Eligibility</h4>
+    <button id="btn-check-elig">Check eligibility</button>
+    <div id="elig-status" class="muted" style="margin-top:4px;"></div>
+    <div id="elig-out" style="margin-top:4px; font-size:13px;"></div>
+  
+    <!-- ⭐ AUTOFILL BUTTON ⭐ -->
+    <button id="btn-autofill">Autofill form</button>
+    <div id="autofill-status" class="muted" style="margin-top:4px;"></div>
+
   <!-- ⭐ SAVE BUTTON ⭐ -->
   <button id="btn-save" style="margin-top:12px;">Save scholarship</button>
   <div id="save-status" class="muted" style="margin-top:4px;"></div>
-    <!-- ⭐ SCHOLARSHIP LIBRARY ⭐ -->
-    <hr style="margin:12px 0" />
 
-    <h4>Scholarship Library (beta)</h4>
-  
-    <input
-      id="library-search"
-      type="text"
-      placeholder="Search scholarships (e.g. 'engineering')"
-      style="width:100%; font-size:13px; margin-bottom:6px;"
-    />
-  
-    <button id="btn-load-library">Load scholarships</button>
-    <div id="library-status" class="muted" style="margin-top:6px;"></div>
-  
-    <div
-      id="library-list"
-      style="
-        margin-top:8px;
-        max-height: 170px;
-        overflow-y:auto;
-        font-size:13px;
-        border:1px solid #ddd;
-        padding:6px;
-      "
-    ></div>
-  
-    <div
-      id="library-detail"
-      style="margin-top:8px; font-size:13px;"
-    ></div>
-  
-    <script type="module" src="./popup.js"></script>
-  </body>
-  </html>
-  
+  <!-- ⭐ SCHOLARSHIP LIBRARY ⭐ -->
+  <hr style="margin:12px 0" />
 
-  <script src="popup.js"></script>
+  <h4>Scholarship Library (beta)</h4>
+
+  <input
+    id="library-search"
+    type="text"
+    placeholder="Search scholarships (e.g. 'engineering')"
+    style="width:100%; font-size:13px; margin-bottom:6px;"
+  />
+
+  <button id="btn-load-library">Load scholarships</button>
+  <div id="library-status" class="muted" style="margin-top:6px;"></div>
+
+  <div
+    id="library-list"
+    style="
+      margin-top:8px;
+      max-height: 170px;
+      overflow-y:auto;
+      font-size:13px;
+      border:1px solid #ddd;
+      padding:6px;
+    "
+  ></div>
+
+  <div
+    id="library-detail"
+    style="margin-top:8px; font-size:13px;"
+  ></div>
+
+  <!-- Only one script include, as a module -->
+  <script type="module" src="./popup.js"></script>
 </body>
 </html>
