@@ -1,11 +1,14 @@
 function scheduleCheckIns(minutes, checkIns) {
   const now = Date.now();
-  const add = (m) => chrome.alarms.create(`ci_${m}`, { when: now + m * 60 * 1000 });
-  (checkIns || []).forEach(ci => {
+  const add = (m) =>
+    chrome.alarms.create(`ci_${m}`, { when: now + m * 60 * 1000 });
+  (checkIns || []).forEach((ci) => {
     const m = parseInt(ci.split("+")[1]) || 5;
     add(m);
   });
-  chrome.alarms.create("endBlock", { when: now + (minutes || 20) * 60 * 1000 });
+  chrome.alarms.create("endBlock", {
+    when: now + (minutes || 20) * 60 * 1000,
+  });
 }
 
 chrome.runtime.onMessage.addListener((msg) => {
@@ -15,7 +18,7 @@ chrome.runtime.onMessage.addListener((msg) => {
       type: "basic",
       iconUrl: "icon48.png",
       title: "Focus started",
-      message: `Block running for ${msg.minutes} min`
+      message: `Block running for ${msg.minutes} min`,
     });
   }
 });
@@ -26,7 +29,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
       type: "basic",
       iconUrl: "icon48.png",
       title: "Check-in",
-      message: "How's it going? Need a 30-sec tip?"
+      message: "How's it going? Need a 30-sec tip?",
     });
   }
   if (alarm.name === "endBlock") {
@@ -34,7 +37,15 @@ chrome.alarms.onAlarm.addListener((alarm) => {
       type: "basic",
       iconUrl: "icon48.png",
       title: "Time!",
-      message: "2-min debrief: What worked? What to change next time?"
+      message: "2-min debrief: What worked? What to change next time?",
+    });
+
+    // NEW: tell content scripts the block is over so they can clean up focus UI
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tab = tabs[0];
+      if (tab && tab.id != null) {
+        chrome.tabs.sendMessage(tab.id, { type: "END_BLOCK" });
+      }
     });
   }
 });
