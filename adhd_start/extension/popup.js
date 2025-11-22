@@ -8,6 +8,7 @@ const PARSE_URL = "http://localhost:8000/parse";
 const BOOKMARK_URL = "http://localhost:8000/bookmark";
 const BOOKMARKS_URL = "http://localhost:8000/bookmarks?user_id=demo-user";
 const GOAL_DEFAULT = "Help me start this application";
+const PROFILE_PAGE_URL = chrome.runtime.getURL("profile.html");
 
 function escapeHtml(s) {
   return String(s)
@@ -274,16 +275,125 @@ async function onShowSaved() {
   }
 }
 
+// -------- FOCUS MODE (circle / rect / none) --------
+
+async function setFocusMode(mode) {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) return;
+
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (mode) => {
+      (function (mode) {
+        const w = window;
+
+        function cleanup() {
+          if (w.__adhdSpotlightEl) {
+            w.__adhdSpotlightEl.remove();
+            w.__adhdSpotlightEl = null;
+          }
+          if (w.__adhdSpotlightMoveHandler) {
+            window.removeEventListener("mousemove", w.__adhdSpotlightMoveHandler);
+            w.__adhdSpotlightMoveHandler = null;
+          }
+          if (w.__adhdSpotlightKeyHandler) {
+            window.removeEventListener("keydown", w.__adhdSpotlightKeyHandler);
+            w.__adhdSpotlightKeyHandler = null;
+          }
+          w.__adhdSpotlightMode = "none";
+        }
+
+        // Turn off mode
+        if (mode === "none") {
+          cleanup();
+          return;
+        }
+
+        // Ensure spotlight element exists
+        if (!w.__adhdSpotlightEl) {
+          const sp = document.createElement("div");
+          Object.assign(sp.style, {
+            position: "fixed",
+            top: "0px",
+            left: "0px",
+            width: "0px",
+            height: "0px",
+            pointerEvents: "none", // don’t block clicks
+            zIndex: "999999999",
+            boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)",
+            transition:
+              "top 0.08s ease-out, left 0.08s ease-out, width 0.08s ease-out, height 0.08s ease-out"
+          });
+          document.body.appendChild(sp);
+          w.__adhdSpotlightEl = sp;
+
+          // Mouse move handler
+          w.__adhdSpotlightMoveHandler = function (e) {
+            const spEl = w.__adhdSpotlightEl;
+            if (!spEl || w.__adhdSpotlightMode === "none") return;
+
+            let width, height, radius;
+            if (w.__adhdSpotlightMode === "circle") {
+              width = height = 240;
+              radius = "50%";
+            } else {
+              // soft rounded rectangle
+              width = 320;
+              height = 190;
+              radius = "18px";
+            }
+
+            const x = e.clientX - width / 2;
+            const y = e.clientY - height / 2;
+
+            spEl.style.width = width + "px";
+            spEl.style.height = height + "px";
+            spEl.style.borderRadius = radius;
+            spEl.style.left = x + "px";
+            spEl.style.top = y + "px";
+          };
+          window.addEventListener("mousemove", w.__adhdSpotlightMoveHandler);
+
+          // ESC to exit
+          w.__adhdSpotlightKeyHandler = function (e) {
+            if (e.key === "Escape") {
+              cleanup();
+            }
+          };
+          window.addEventListener("keydown", w.__adhdSpotlightKeyHandler);
+        }
+
+        // update mode
+        w.__adhdSpotlightMode = mode;
+      })(mode);
+    },
+    args: [mode],
+  });
+}
+
 /* -------- MAIN -------- */
 
 function main() {
   console.log("popup loaded");
 
-  const btn = $("#plan");
-  if (btn) {
-    btn.addEventListener("click", onClickPlan);
+
+
+  // Wire Plan button
+  const planBtn = $("#plan");
+  if (planBtn) {
+    planBtn.addEventListener("click", onClickPlan);
   }
 
+  // Open profile page in a new tab when the Profile button is clicked
+  const profileBtn = $("#open-profile");
+  if (profileBtn) {
+    profileBtn.addEventListener("click", () => {
+      chrome.tabs.create({ url: PROFILE_PAGE_URL });
+    });
+  }
+
+
+  // Wire Scan / Parse button
   const scanBtn = document.getElementById("btn-scan");
   if (scanBtn) {
     scanBtn.addEventListener("click", async () => {
@@ -309,6 +419,7 @@ function main() {
     });
   }
 
+  // Wire Save button (already in your code)
   const saveBtn = document.getElementById("btn-save");
   if (saveBtn) {
     saveBtn.addEventListener("click", () => {
@@ -316,12 +427,30 @@ function main() {
     });
   }
 
+  // Wire Show Saved button (already in your code)
   const showSavedBtn = document.getElementById("btn-show-saved");
   if (showSavedBtn) {
     showSavedBtn.addEventListener("click", () => {
       onShowSaved();
     });
   }
+
+  // Focus buttons
+  const focusNone = document.getElementById("focusNone");
+  if (focusNone) {
+    focusNone.addEventListener("click", () => setFocusMode("none"));
+  }
+
+  const focusCircle = document.getElementById("focusCircle");
+  if (focusCircle) {
+    focusCircle.addEventListener("click", () => setFocusMode("circle"));
+  }
+
+  const focusRect = document.getElementById("focusRect");
+  if (focusRect) {
+    focusRect.addEventListener("click", () => setFocusMode("rect"));
+  }
+
 }
 
 document.addEventListener("DOMContentLoaded", main);

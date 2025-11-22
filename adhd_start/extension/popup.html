@@ -130,6 +130,10 @@
     }
 
     .status,
+      margin-bottom: 8px;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
     .muted {
       font-size: 12px;
       color: var(--muted);
@@ -170,6 +174,13 @@
       display: flex;
       justify-content: space-between;
       gap: 8px;
+    .small-label{
+      font-size:12px;
+      color:#667;
+      margin-top:8px;
+      display:block
+    }
+    h4 {
       margin-bottom: 4px;
     }
 
@@ -265,11 +276,27 @@
   <h3>Start-to-Act • Scholarship Copilot</h3>
   <div class="subtitle">Turn this scholarship page into a 20-min micro-start block and keep track of saved opportunities.</div>
 
+  <button id="open-profile">Profile</button>
+
+  <!-- ⭐ SAVED SCHOLARSHIPS ⭐ -->
+  <h4>Saved Scholarships</h4>
+  <button id="btn-show-saved">Show Saved</button>
+  <div id="saved-list" style="margin-top:6px; font-size:13px;"></div>
+
   <!-- Micro-start section -->
   <div class="section-card">
     <div class="section-header">
       <div class="section-title">Micro-start plan</div>
     </div>
+  <hr style="margin:12px 0" />
+
+  <h3>ADHD Scholarship Copilot (Demo)</h3>
+
+  <!-- NEW FOCUS MODE CONTROLS -->
+  <span class="small-label">Focus mode:</span>
+  <button id="focusNone" type="button">None</button>
+  <button id="focusCircle" type="button">Circle</button>
+  <button id="focusRect" type="button">Rectangle</button>
 
     <textarea id="goal" rows="3"
       placeholder="Optional: your twist here, e.g. “Tailor CV for this scholarship”"></textarea>
@@ -277,6 +304,9 @@
     <button id="plan" class="btn-primary">Generate micro-start</button>
     <div id="result" class="status" style="margin-top:8px;"></div>
   </div>
+  <button id="plan">Micro-start</button>
+
+  <div id="result" class="muted" style="margin-top:10px;"></div>
 
   <!-- Requirements scan -->
   <div class="section-card">
@@ -303,6 +333,6 @@
     </div>
   </div>
 
-  <script type="module" src="./popup.js"></script>
+  <script src="popup.js"></script>
 </body>
 </html>
