@@ -18,12 +18,19 @@
     }
     button {
       margin-top: 8px;
+      margin-bottom: 8px;
       padding: 6px 10px;
       font-size: 13px;
     }
     .muted {
       color: #667;
       font-size: 12px;
+    }
+    .small-label{
+      font-size:12px;
+      color:#667;
+      margin-top:8px;
+      display:block
     }
     h4 {
       margin-bottom: 4px;
@@ -32,6 +39,8 @@
   </style>
 </head>
 <body>
+
+  <button id="open-profile">Profile</button>
 
   <!-- ⭐ SAVED SCHOLARSHIPS ⭐ -->
   <h4>Saved Scholarships</h4>
@@ -42,10 +51,17 @@
 
   <h3>ADHD Scholarship Copilot (Demo)</h3>
 
+  <!-- NEW FOCUS MODE CONTROLS -->
+  <span class="small-label">Focus mode:</span>
+  <button id="focusNone" type="button">None</button>
+  <button id="focusCircle" type="button">Circle</button>
+  <button id="focusRect" type="button">Rectangle</button>
+
   <textarea id="goal" rows="3"
     placeholder="Optional: what's your goal? e.g., 'Tailor this resume'"></textarea>
 
   <button id="plan">Micro-start</button>
+
   <div id="result" class="muted" style="margin-top:10px;"></div>
 
   <!-- ⭐ REQUIREMENTS SCAN ⭐ -->
@@ -61,6 +77,6 @@
   <button id="btn-save" style="margin-top:12px;">Save scholarship</button>
   <div id="save-status" class="muted" style="margin-top:4px;"></div>
 
-  <script type="module" src="./popup.js"></script>
+  <script src="popup.js"></script>
 </body>
 </html>
