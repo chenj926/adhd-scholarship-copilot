@@ -1,23 +1,18 @@
 "use strict";
 
-// Simple helpers
-const $ = (sel) => document.querySelector(sel);
-
+// =============================================================================
+// 1. CONFIG & HELPERS
+// =============================================================================
 const API_URL = "http://localhost:8000/plan";
 const PARSE_URL = "http://localhost:8000/parse";
 const BOOKMARK_URL = "http://localhost:8000/bookmark";
 const BOOKMARKS_URL = "http://localhost:8000/bookmarks?user_id=demo-user";
-const GOAL_DEFAULT = "Help me start this application";
+const ELIGIBILITY_URL = "http://localhost:8000/eligibility";
 const PROFILE_PAGE_URL = chrome.runtime.getURL("profile.html");
 
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+const $ = (sel) => document.querySelector(sel);
+const show = (el) => el && el.classList.remove("hidden");
+const hide = (el) => el && el.classList.add("hidden");
 
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -25,119 +20,195 @@ async function getActiveTab() {
   return tab;
 }
 
-/** Capture up to ~8k chars of VISIBLE text from current page */
+// Send message to content script; inject focus_games.js if needed
+function sendMessageToPage(msg) {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tab = tabs[0];
+    if (!tab?.id) return;
+
+    chrome.tabs.sendMessage(tab.id, msg, () => {
+      if (chrome.runtime.lastError) {
+        console.warn("[popup] injecting focus_games.js…");
+        chrome.scripting.executeScript(
+          { target: { tabId: tab.id }, files: ["focus_games.js"] },
+          () => setTimeout(() => chrome.tabs.sendMessage(tab.id, msg), 200)
+        );
+      }
+    });
+  });
+}
+
 async function captureVisibleText() {
   const tab = await getActiveTab();
   const [exec] = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    func: () => (document.body?.innerText || "").slice(0, 8000),
+    func: () => (document.body ? document.body.innerText.slice(0, 8000) : ""),
   });
   return exec?.result || "";
 }
 
-/* -------- PLAN -------- */
+// =============================================================================
+// 2. POPUP STATE
+// =============================================================================
+function savePopupState() {
+  const state = {
+    goal: $("#goal")?.value || "",
+    minutes: $("#focus-minutes")?.value || "20",
+    checkins: $("#focus-checkins")?.value || "5, 12",
+  };
+  chrome.storage.local.set({ popupState: state });
+}
 
+function restorePopupState() {
+  chrome.storage.local.get(["popupState"], (res) => {
+    const s = res.popupState;
+    if (!s) return;
+    if ($("#goal")) $("#goal").value = s.goal || "";
+    if ($("#focus-minutes")) $("#focus-minutes").value = s.minutes || "20";
+    if ($("#focus-checkins")) $("#focus-checkins").value = s.checkins || "5, 12";
+  });
+}
+
+// =============================================================================
+// 3. FOCUS BLOCK + SPOTLIGHT
+// =============================================================================
+
+// "5" -> every 5min; "5, 12" -> at 5 and 12
+function parseCheckInsInput(totalMinutes) {
+  const raw = $("#focus-checkins")?.value || "";
+  const nums = raw
+    .split(/[,，]/)
+    .map((s) => parseFloat(s.trim()))
+    .filter((n) => !Number.isNaN(n) && n > 0);
+
+  if (!nums.length) return [];
+  if (!totalMinutes || totalMinutes <= 0) totalMinutes = 20;
+
+  let result = [];
+  if (nums.length === 1) {
+    const step = nums[0];
+    let t = step;
+    while (t < totalMinutes) {
+      result.push(`T+${t}`);
+      t += step;
+    }
+  } else {
+    result = nums.filter((n) => n < totalMinutes).map((n) => `T+${n}`);
+  }
+  return result;
+}
+
+function startFocusBlock() {
+  savePopupState();
+
+  const minutes = parseInt($("#focus-minutes")?.value || "20", 10) || 20;
+  const checkIns = parseCheckInsInput(minutes);
+
+  chrome.runtime.sendMessage({
+    type: "START_BLOCK",
+    minutes,
+    checkIns,
+  });
+
+  sendMessageToPage({
+    type: "START_BLOCK",
+    minutes,
+    checkIns,
+    autoSpotlight: true,
+  });
+
+  const status = $("#tool-status");
+  if (status) {
+    status.textContent = `Focus block started (${minutes} min).`;
+    setTimeout(() => (status.textContent = ""), 1500);
+  }
+}
+
+function stopFocusBlock() {
+  chrome.runtime.sendMessage({ type: "END_BLOCK" });
+  sendMessageToPage({ type: "END_BLOCK" });
+
+  const status = $("#tool-status");
+  if (status) {
+    status.textContent = "Focus ended.";
+    setTimeout(() => (status.textContent = ""), 1200);
+  }
+}
+
+function bindSpotlightControls() {
+  const wrap = $("#spotlight-controls");
+  if (!wrap) return;
+  const btns = wrap.querySelectorAll("button");
+  btns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      btns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      const mode = btn.dataset.mode;
+      sendMessageToPage({
+        type: "TOGGLE_SPOTLIGHT",
+        enable: mode !== "none",
+        mode,
+      });
+    });
+  });
+}
+
+// =============================================================================
+// 4. MICRO-START PLAN (/plan)
+// =============================================================================
 async function requestPlan(goal, text) {
   const resp = await fetch(API_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ goal, text }),
+    body: JSON.stringify({ user_id: "demo-user", goal, text }),
   });
-  if (!resp.ok) throw new Error("Server error. Is FastAPI running on :8000?");
+  if (!resp.ok) throw new Error("Plan endpoint error");
   return await resp.json();
 }
 
-function renderPlan(el, data) {
-  const micro = data.micro_start || "Open the page and list 3 required items.";
-  const mins = data.block_minutes || 20;
-  const cis = Array.isArray(data.check_ins) ? data.check_ins : ["T+5", "T+12"];
-  const purpose =
-    data.purpose || "Build momentum toward this scholarship or application.";
-  const deadline = data.deadline;
+function renderPlan(plan) {
+  const el = $("#ai-result");
+  if (!el) return;
 
-  const policy = data.ai_policy || "ok";
-  const badgeClass = policy === "coach_only" ? "badge badge-coach" : "badge badge-ok";
-  const badgeLabel =
-    policy === "coach_only"
-      ? "Coach-only (no AI drafting)"
-      : "AI-ok (co-writing allowed)";
+  const mins = plan.block_minutes ?? 20;
+  const cis = (plan.check_ins || [])
+    .map((s) => String(s).replace("T+", ""))
+    .join(", ");
+
+  if ($("#focus-minutes")) $("#focus-minutes").value = mins;
+  if ($("#focus-checkins")) $("#focus-checkins").value = cis;
+  savePopupState();
 
   el.innerHTML = `
-    <div class="plan-inner">
-      <div class="plan-header-row">
-        <span class="label">Your micro-start</span>
-        <span class="${badgeClass}">${badgeLabel}</span>
-      </div>
-      <div class="plan-micro">${escapeHtml(micro)}</div>
-
-      <div class="plan-row">
-        <div>
-          <div class="label">Block</div>
-          <div>${mins} min</div>
-        </div>
-        <div>
-          <div class="label">Check-ins</div>
-          <div>${cis.join(" • ")}</div>
-        </div>
-      </div>
-
-      <div style="margin-top:4px;">
-        <div class="label">Purpose</div>
-        <div>${escapeHtml(purpose)}</div>
-      </div>
-
-      ${
-        deadline
-          ? `
-        <div style="margin-top:4px;">
-          <div class="label">Deadline</div>
-          <div>${escapeHtml(deadline)}</div>
-        </div>
-      `
-          : ""
-      }
+    <div style="line-height:1.4;">
+      <b>Start:</b> ${plan.micro_start}
+    </div>
+    <div class="muted">
+      ${plan.purpose || "Ready to focus?"}
     </div>
   `;
 }
 
-function startBlock(minutes, checkIns) {
-  chrome.runtime.sendMessage({
-    type: "START_BLOCK",
-    minutes: minutes || 20,
-    checkIns: checkIns && checkIns.length ? checkIns : ["T+5", "T+12"],
-  });
-}
-
-async function onClickPlan() {
-  const result = $("#result");
-  const goalInput = $("#goal");
-  const btn = $("#plan");
-
+async function onPlanClick() {
+  const result = $("#ai-result");
   if (!result) return;
-
-  btn && (btn.disabled = true);
-  result.classList.remove("error");
-  result.textContent = "Capturing page text…";
+  result.textContent = "Capturing page & thinking…";
 
   try {
-    const pageText = await captureVisibleText();
-    result.textContent = "Thinking…";
-
-    const goal = (goalInput?.value || "").trim() || GOAL_DEFAULT;
-    const data = await requestPlan(goal, pageText);
-
-    renderPlan(result, data);
-    startBlock(data.block_minutes, data.check_ins);
+    const text = await captureVisibleText();
+    const rawGoal = $("#goal")?.value || "";
+    const goal = rawGoal.trim() || "Help me start this application";
+    const plan = await requestPlan(goal, text);
+    renderPlan(plan);
   } catch (err) {
     console.error(err);
-    result.classList.add("error");
-    result.textContent = err?.message || "Something went wrong.";
-  } finally {
-    btn && (btn.disabled = false);
+    result.textContent = "Plan failed (check backend).";
   }
 }
 
-/* -------- PARSE / REQUIREMENTS -------- */
+// =============================================================================
+// 5. SCAN / ELIGIBILITY / SAVE / AUTOFILL
+// =============================================================================
 
 async function requestParse(text) {
   const resp = await fetch(PARSE_URL, {
@@ -145,312 +216,277 @@ async function requestParse(text) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id: "demo-user", text }),
   });
-  if (!resp.ok) throw new Error("Parse error. Is FastAPI running on :8000?");
+  if (!resp.ok) throw new Error("Parse error");
   return await resp.json();
 }
 
-function renderReqs(container, data) {
-  const refs = data.refs_required ?? "—";
-  const valuesList = (data.values || [])
-    .map((v) => `<li>${escapeHtml(v)}</li>`)
-    .join("");
-
-  const policy = data.ai_policy || "ok";
-  const badge =
-    policy === "coach_only"
-      ? `<div style="margin:6px 0;">
-           <span class="badge badge-coach">This page forbids AI-written text. Coach-only mode suggested.</span>
-         </div>`
-      : "";
-
-  const conf =
-    data.confidence != null
-      ? ` (~${Math.round(data.confidence * 100)}% sure)`
-      : "";
-
-  container.innerHTML =
-    (data.deadline
-      ? `<div>
-           <div class="label">Deadline</div>
-           <div>${escapeHtml(data.deadline)}</div>
-         </div>`
-      : "") +
-    `<div style="margin-top:4px;">
-       <div class="label">References</div>
-       <div>${refs}</div>
-     </div>` +
-    (valuesList
-      ? `<div style="margin-top:4px;">
-           <div class="label">Values / Criteria</div>
-           <ul class="values-list">${valuesList}</ul>
-         </div>`
-      : "") +
-    badge +
-    (conf
-      ? `<div class="muted" style="margin-top:4px;">Confidence${conf}</div>`
-      : "");
-}
-
-/* -------- BOOKMARK / SAVE -------- */
-
-async function saveCurrentPage() {
-  const statusEl = document.getElementById("save-status");
-  if (statusEl) statusEl.textContent = "Saving…";
+async function onScanPage() {
+  const status = $("#tool-status");
+  const out = $("#tool-output");
+  if (status) status.textContent = "Scanning requirements…";
+  if (out) {
+    show(out);
+    out.innerHTML = "";
+  }
 
   try {
-    const tab = await getActiveTab();
-    const url = tab.url || "";
-    const title = tab.title || "Saved scholarship";
+    const text = await captureVisibleText();
+    const parsed = await requestParse(text);
 
-    let host = "";
-    try {
-      host = url ? new URL(url).hostname : "";
-    } catch (e) {
-      host = "";
-    }
+    const refs = parsed.refs_required ?? "—";
+    const deadline = parsed.deadline ?? "—";
+    out.innerHTML = `
+      <div><b>Deadline:</b> ${deadline}</div>
+      <div><b>References:</b> ${refs}</div>
+      ${
+        parsed.values && parsed.values.length
+          ? `<div style="margin-top:4px;"><b>They care about:</b><ul style="margin:4px 0 0 16px">${parsed.values
+              .map((v) => `<li>${v}</li>`)
+              .join("")}</ul></div>`
+          : ""
+      }
+    `;
+    if (status) status.textContent = "Scan complete.";
+  } catch (err) {
+    console.error(err);
+    if (status) status.textContent = "Scan failed.";
+  }
+}
 
-    const payload = {
-      user_id: "demo-user",
-      url,
-      title,
-      source_site: host || null,
-      deadline: null,
-      tags: [],
-    };
-
-    const resp = await fetch(BOOKMARK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+function getProfileFromStorage() {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get("userProfile", (res) => {
+      resolve(res.userProfile || null);
     });
-
-    if (!resp.ok) throw new Error("Bookmark error");
-
-    const data = await resp.json();
-    console.log("Bookmark saved:", data);
-    if (statusEl) statusEl.textContent = "Saved ✔";
-  } catch (err) {
-    console.error(err);
-    if (statusEl) statusEl.textContent = err?.message || "Could not save.";
-  }
-}
-
-/* -------- BOOKMARKS LIST (SHOW SAVED) -------- */
-
-async function fetchBookmarks() {
-  const resp = await fetch(BOOKMARKS_URL);
-  if (!resp.ok) throw new Error("Could not load bookmarks");
-  return await resp.json();
-}
-
-function renderBookmarks(container, items) {
-  if (!items.length) {
-    container.textContent = "No saved scholarships yet.";
-    return;
-  }
-
-  container.innerHTML = items
-    .map(
-      (bm) => `
-        <div class="saved-item">
-          <div class="saved-title">${escapeHtml(bm.title || "(untitled)")}</div>
-          <div class="saved-meta">${escapeHtml(bm.status || "saved")}</div>
-          <div class="saved-url">${escapeHtml(bm.url || "")}</div>
-        </div>
-      `
-    )
-    .join("");
-}
-
-async function onShowSaved() {
-  const listEl = document.getElementById("saved-list");
-  if (!listEl) return;
-  listEl.textContent = "Loading…";
-  try {
-    const items = await fetchBookmarks();
-    renderBookmarks(listEl, items);
-  } catch (err) {
-    console.error(err);
-    listEl.textContent = err?.message || "Could not load saved scholarships.";
-  }
-}
-
-// -------- FOCUS MODE (circle / rect / none) --------
-
-async function setFocusMode(mode) {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab) return;
-
-  await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: (mode) => {
-      (function (mode) {
-        const w = window;
-
-        function cleanup() {
-          if (w.__adhdSpotlightEl) {
-            w.__adhdSpotlightEl.remove();
-            w.__adhdSpotlightEl = null;
-          }
-          if (w.__adhdSpotlightMoveHandler) {
-            window.removeEventListener("mousemove", w.__adhdSpotlightMoveHandler);
-            w.__adhdSpotlightMoveHandler = null;
-          }
-          if (w.__adhdSpotlightKeyHandler) {
-            window.removeEventListener("keydown", w.__adhdSpotlightKeyHandler);
-            w.__adhdSpotlightKeyHandler = null;
-          }
-          w.__adhdSpotlightMode = "none";
-        }
-
-        // Turn off mode
-        if (mode === "none") {
-          cleanup();
-          return;
-        }
-
-        // Ensure spotlight element exists
-        if (!w.__adhdSpotlightEl) {
-          const sp = document.createElement("div");
-          Object.assign(sp.style, {
-            position: "fixed",
-            top: "0px",
-            left: "0px",
-            width: "0px",
-            height: "0px",
-            pointerEvents: "none", // don’t block clicks
-            zIndex: "999999999",
-            boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)",
-            transition:
-              "top 0.08s ease-out, left 0.08s ease-out, width 0.08s ease-out, height 0.08s ease-out"
-          });
-          document.body.appendChild(sp);
-          w.__adhdSpotlightEl = sp;
-
-          // Mouse move handler
-          w.__adhdSpotlightMoveHandler = function (e) {
-            const spEl = w.__adhdSpotlightEl;
-            if (!spEl || w.__adhdSpotlightMode === "none") return;
-
-            let width, height, radius;
-            if (w.__adhdSpotlightMode === "circle") {
-              width = height = 240;
-              radius = "50%";
-            } else {
-              // soft rounded rectangle
-              width = 320;
-              height = 190;
-              radius = "18px";
-            }
-
-            const x = e.clientX - width / 2;
-            const y = e.clientY - height / 2;
-
-            spEl.style.width = width + "px";
-            spEl.style.height = height + "px";
-            spEl.style.borderRadius = radius;
-            spEl.style.left = x + "px";
-            spEl.style.top = y + "px";
-          };
-          window.addEventListener("mousemove", w.__adhdSpotlightMoveHandler);
-
-          // ESC to exit
-          w.__adhdSpotlightKeyHandler = function (e) {
-            if (e.key === "Escape") {
-              cleanup();
-            }
-          };
-          window.addEventListener("keydown", w.__adhdSpotlightKeyHandler);
-        }
-
-        // update mode
-        w.__adhdSpotlightMode = mode;
-      })(mode);
-    },
-    args: [mode],
   });
 }
 
-/* -------- MAIN -------- */
-
-function main() {
-  console.log("popup loaded");
-
-
-
-  // Wire Plan button
-  const planBtn = $("#plan");
-  if (planBtn) {
-    planBtn.addEventListener("click", onClickPlan);
+async function onCheckEligibility() {
+  const status = $("#tool-status");
+  const out = $("#tool-output");
+  if (status) status.textContent = "Checking eligibility…";
+  if (out) {
+    show(out);
+    out.innerHTML = "";
   }
 
-  // Open profile page in a new tab when the Profile button is clicked
-  const profileBtn = $("#open-profile");
-  if (profileBtn) {
-    profileBtn.addEventListener("click", () => {
-      chrome.tabs.create({ url: PROFILE_PAGE_URL });
+  try {
+    const [text, profile] = await Promise.all([
+      captureVisibleText(),
+      getProfileFromStorage(),
+    ]);
+
+    if (!profile) {
+      out.textContent = "No profile found. Open Profile and fill it first.";
+      if (status) status.textContent = "Profile missing.";
+      return;
+    }
+
+    const resp = await fetch(ELIGIBILITY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: "demo-user", profile, text }),
     });
+
+    if (!resp.ok) {
+      out.textContent =
+        "Eligibility endpoint not implemented. You can rely on Scan + your judgement.";
+      if (status) status.textContent = "Eligibility not available.";
+      return;
+    }
+
+    const data = await resp.json();
+    out.textContent = data.eligible
+      ? "✅ Likely eligible (see console)."
+      : "⚠️ Possibly not eligible (see console).";
+    console.log("Eligibility:", data);
+    if (status) status.textContent = "Eligibility checked.";
+  } catch (err) {
+    console.error(err);
+    out.textContent = "Eligibility check failed.";
+    if (status) status.textContent = "Eligibility failed.";
   }
-
-
-  // Wire Scan / Parse button
-  const scanBtn = document.getElementById("btn-scan");
-  if (scanBtn) {
-    scanBtn.addEventListener("click", async () => {
-      const status = document.getElementById("req-status");
-      const out = document.getElementById("req-out");
-      if (status) {
-        status.classList.remove("error");
-        status.textContent = "Capturing & parsing…";
-      }
-      if (out) out.innerHTML = "";
-      try {
-        const txt = await captureVisibleText();
-        const parsed = await requestParse(txt);
-        if (status) status.textContent = "";
-        if (out) renderReqs(out, parsed);
-      } catch (err) {
-        console.error(err);
-        if (status) {
-          status.classList.add("error");
-          status.textContent = err?.message || "Parse failed.";
-        }
-      }
-    });
-  }
-
-  // Wire Save button (already in your code)
-  const saveBtn = document.getElementById("btn-save");
-  if (saveBtn) {
-    saveBtn.addEventListener("click", () => {
-      saveCurrentPage();
-    });
-  }
-
-  // Wire Show Saved button (already in your code)
-  const showSavedBtn = document.getElementById("btn-show-saved");
-  if (showSavedBtn) {
-    showSavedBtn.addEventListener("click", () => {
-      onShowSaved();
-    });
-  }
-
-  // Focus buttons
-  const focusNone = document.getElementById("focusNone");
-  if (focusNone) {
-    focusNone.addEventListener("click", () => setFocusMode("none"));
-  }
-
-  const focusCircle = document.getElementById("focusCircle");
-  if (focusCircle) {
-    focusCircle.addEventListener("click", () => setFocusMode("circle"));
-  }
-
-  const focusRect = document.getElementById("focusRect");
-  if (focusRect) {
-    focusRect.addEventListener("click", () => setFocusMode("rect"));
-  }
-
 }
 
-document.addEventListener("DOMContentLoaded", main);
+async function onSavePage() {
+  const status = $("#tool-status");
+  if (status) status.textContent = "Saving page…";
+  try {
+    const tab = await getActiveTab();
+    await fetch(BOOKMARK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: "demo-user",
+        url: tab.url,
+        title: tab.title,
+      }),
+    });
+    if (status) status.textContent = "Saved to Library 🔖";
+  } catch (err) {
+    console.error(err);
+    if (status) status.textContent = "Save failed.";
+  }
+}
+
+function onAutofill() {
+  const status = $("#tool-status");
+  if (status) status.textContent = "Autofilling (demo)…";
+  sendMessageToPage({ type: "AUTOFILL_FORM" });
+  setTimeout(() => {
+    if (status) status.textContent = "Autofill sent.";
+  }, 800);
+}
+
+// =============================================================================
+// 6. LIBRARY & SAVED LIST
+// =============================================================================
+
+async function onLoadLibrary() {
+  const q = $("#library-search")?.value || "";
+  const list = $("#library-list");
+  const detail = $("#library-detail");
+  const status = $("#tool-status");
+  if (!list || !detail) return;
+
+  list.innerHTML = "Loading...";
+  detail.innerHTML = "";
+  show(list);
+  hide(detail);
+
+  try {
+    const params = q ? `?q=${encodeURIComponent(q)}` : "";
+    const resp = await fetch(`http://localhost:8000/scholarships${params}`);
+    if (!resp.ok) throw new Error("Library backend not reachable");
+    const data = await resp.json();
+    if (!Array.isArray(data) || !data.length) {
+      list.textContent = "No results.";
+      if (status) status.textContent = "No library results.";
+      return;
+    }
+
+    list.innerHTML = "";
+    data.forEach((item, idx) => {
+      const div = document.createElement("div");
+      div.style.cssText =
+        "padding:6px; border-bottom:1px solid #1f2933; cursor:pointer;";
+      div.innerHTML = `<b>${item.title}</b><br><span class="muted">${item.source_site}</span>`;
+      div.addEventListener("click", () => {
+        detail.innerHTML = `
+          <div><b>${item.title}</b></div>
+          <div class="muted" style="margin-bottom:4px;">${item.source_site}</div>
+          <div style="font-size:12px; margin-bottom:4px;">${item.description_short || ""}</div>
+          <a href="${item.source_url}" target="_blank">Open page</a>
+        `;
+        show(detail);
+      });
+      list.appendChild(div);
+      if (idx === 0) div.click();
+    });
+
+    if (status) status.textContent = "Library loaded.";
+  } catch (err) {
+    console.error(err);
+    list.textContent = "Library offline (ok to ignore).";
+    if (status) status.textContent = "Library offline.";
+  }
+}
+
+let savedVisible = false;
+async function onShowSavedToggle() {
+  const listEl = $("#saved-list");
+  if (!listEl) return;
+
+  if (savedVisible) {
+    hide(listEl);
+    savedVisible = false;
+    return;
+  }
+
+  show(listEl);
+  listEl.textContent = "Loading…";
+
+  try {
+    const resp = await fetch(BOOKMARKS_URL);
+    if (!resp.ok) throw new Error("Bookmarks load failed");
+    const items = await resp.json();
+
+    if (!items.length) {
+      listEl.textContent = "No saved pages.";
+      savedVisible = true;
+      return;
+    }
+
+    listEl.innerHTML = items
+      .map(
+        (bm) => `
+        <div class="saved-item" data-url="${bm.url}" style="padding:4px; border-bottom:1px solid #1f2933; cursor:pointer;">
+          <div><b>${bm.title || "Untitled"}</b></div>
+          <div class="muted" style="font-size:11px;">${bm.url}</div>
+        </div>`
+      )
+      .join("");
+
+    listEl.querySelectorAll(".saved-item").forEach((el) => {
+      el.addEventListener("click", () => {
+        const u = el.getAttribute("data-url");
+        if (u) chrome.tabs.create({ url: u });
+      });
+    });
+
+    savedVisible = true;
+  } catch (err) {
+    console.error(err);
+    listEl.textContent = "Load failed.";
+    savedVisible = true;
+  }
+}
+
+// =============================================================================
+// 7. RELAX GAME (manual trigger)
+// =============================================================================
+
+function onRelaxGame() {
+  sendMessageToPage({ type: "MANUAL_START_GAME", game: "sniper" });
+}
+
+// =============================================================================
+// 8. INIT
+// =============================================================================
+
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("[popup] loaded");
+  restorePopupState();
+  bindSpotlightControls();
+
+  $("#plan")?.addEventListener("click", onPlanClick);
+  $("#btn-start")?.addEventListener("click", startFocusBlock);
+
+  const stopBtn =
+    document.getElementById("btn-end") ||
+    document.getElementById("stop-focus") ||
+    document.getElementById("btn-stop");
+  if (stopBtn) stopBtn.addEventListener("click", stopFocusBlock);
+
+  const relaxBtn = $("#btn-relax-game") || $("#play-sniper");
+  if (relaxBtn) relaxBtn.addEventListener("click", onRelaxGame);
+
+  $("#btn-scan")?.addEventListener("click", onScanPage);
+  $("#btn-check-elig")?.addEventListener("click", onCheckEligibility);
+  $("#btn-save")?.addEventListener("click", onSavePage);
+  $("#btn-autofill")?.addEventListener("click", onAutofill);
+  $("#btn-load-library")?.addEventListener("click", onLoadLibrary);
+  $("#btn-show-saved")?.addEventListener("click", onShowSavedToggle);
+
+  $("#library-search")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") onLoadLibrary();
+  });
+
+  $("#open-profile")?.addEventListener("click", () =>
+    chrome.tabs.create({ url: PROFILE_PAGE_URL })
+  );
+
+  $("#goal")?.addEventListener("input", savePopupState);
+  $("#focus-minutes")?.addEventListener("input", savePopupState);
+  $("#focus-checkins")?.addEventListener("input", savePopupState);
+});

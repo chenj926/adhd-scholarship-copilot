@@ -2,337 +2,181 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Start-to-Act • Scholarship Copilot</title>
+  <title>ADHD Scholarship Copilot</title>
   <style>
     :root {
-      --bg: #0e1328;
-      --card: #151a3b;
-      --ink: #e9ecff;
-      --muted: #b0b8ff;
-      --accent: #7aa2ff;
-      --accent-soft: rgba(122, 162, 255, 0.15);
-      --green: #48d597;
-      --yellow: #ffd166;
-      --border-subtle: rgba(255, 255, 255, 0.08);
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f1f5f9;
+      --accent: #3b82f6;
+      --green: #10b981;
+      --orange: #f59e0b;
+      --border: rgba(255,255,255,0.1);
     }
-
     body {
       margin: 0;
-      padding: 14px 16px 16px;
-      max-width: 420px;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top, #18214a 0, #050717 55%, #020310 100%);
-      color: var(--ink);
+      padding: 14px;
+      width: 380px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
       font-size: 13px;
-      line-height: 1.5;
     }
-
-    h3 {
-      margin: 0 0 4px;
-      font-size: 16px;
-    }
-
-    .subtitle {
+    
+    .hidden { display: none !important; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .col { display: flex; flex-direction: column; gap: 8px; }
+    .muted { color: #94a3b8; font-size: 11px; }
+    
+    button {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: #cbd5e1;
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
       font-size: 12px;
-      color: var(--muted);
+      transition: all 0.1s;
+    }
+    button:hover { background: rgba(255,255,255,0.1); }
+    button:active { transform: scale(0.98); }
+    
+    .btn-success {
+      background: var(--green);
+      color: #064e3b;
+      border: none;
+      font-weight: 700;
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 12px;
+      border: 1px solid var(--border);
       margin-bottom: 10px;
     }
 
-    .section-card {
-      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
-      border-radius: 12px;
-      border: 1px solid var(--border-subtle);
-      padding: 10px 10px 8px;
-      margin-top: 10px;
-    }
-
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 6px;
-    }
-
-    .section-title {
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-
-    textarea {
+    textarea,
+    input[type="text"],
+    input[type="number"],
+    select {
       width: 100%;
+      background: #020617;
+      border: 1px solid var(--border);
+      color: white;
+      border-radius: 6px;
+      padding: 8px;
       box-sizing: border-box;
-      min-height: 56px;
-      resize: vertical;
-      border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.14);
-      padding: 6px 8px;
-      background: #090d21;
-      color: var(--ink);
-      font-size: 13px;
+      font-family: inherit;
     }
-
-    textarea::placeholder {
-      color: #6169a4;
-    }
-
-    button {
-      border-radius: 999px;
-      border: none;
-      padding: 7px 12px;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background 0.15s ease, transform 0.05s ease, opacity 0.1s ease;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+    
+    .toggle-group {
+      display: flex;
       gap: 4px;
+      background: #020617;
+      padding: 2px;
+      border-radius: 6px;
     }
-
-    button:active {
-      transform: translateY(1px);
-    }
-
-    .btn-primary {
-      width: 100%;
-      margin-top: 8px;
-      background: var(--accent);
-      color: #050717;
-    }
-
-    .btn-primary:disabled {
-      opacity: 0.6;
-      cursor: default;
-    }
-
-    .btn-secondary {
-      margin-top: 4px;
-      background: transparent;
-      color: var(--muted);
-      border: 1px solid rgba(255,255,255,0.18);
-      padding-inline: 10px;
-    }
-
-    .btn-chip {
-      background: rgba(255,255,255,0.06);
-      color: var(--muted);
-      padding: 4px 10px;
-      font-size: 11px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.12);
-    }
-
-    .btn-chip:hover {
-      background: rgba(255,255,255,0.12);
-    }
-
-    .status,
-      margin-bottom: 8px;
-      padding: 6px 10px;
-      font-size: 13px;
-    }
-    .muted {
-      font-size: 12px;
-      color: var(--muted);
-      min-height: 16px;
-    }
-
-    .status.error {
-      color: #ff6b6b;
-    }
-
-    /* Plan card inside result */
-    .plan-inner {
-      line-height: 1.55;
-      font-size: 12px;
-    }
-
-    .plan-header-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 4px;
-    }
-
-    .label {
-      font-weight: 600;
-      color: var(--muted);
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .plan-micro {
-      font-size: 13px;
-      margin-bottom: 6px;
-    }
-
-    .plan-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-    .small-label{
-      font-size:12px;
-      color:#667;
-      margin-top:8px;
-      display:block
-    }
-    h4 {
-      margin-bottom: 4px;
-    }
-
-    .plan-row > div {
+    .toggle-group button {
       flex: 1;
+      border: none;
+      background: transparent;
+      color: #64748b;
+      font-size: 10px;
+    }
+    .toggle-group button.active {
+      background: var(--card);
+      color: var(--accent);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.5);
     }
 
-    .badge {
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      border: 1px solid rgba(255,255,255,0.25);
-      white-space: nowrap;
-    }
-
-    .badge-ok {
-      border-color: rgba(72,213,151,0.55);
-      color: var(--green);
-      background: rgba(72,213,151,0.06);
-    }
-
-    .badge-coach {
-      border-color: rgba(255,209,102,0.8);
-      color: var(--yellow);
-      background: rgba(255,209,102,0.08);
-    }
-
-    .req-out {
-      margin-top: 6px;
-      font-size: 12px;
-    }
-
-    .values-list {
-      margin: 4px 0 0 18px;
-      padding: 0;
-    }
-
-    .values-list li {
-      margin-bottom: 2px;
-    }
-
-    .saved-list {
-      margin-top: 4px;
-      font-size: 12px;
-      max-height: 160px;
-      overflow-y: auto;
-    }
-
-    .saved-item {
-      padding: 6px 6px 5px;
-      border-radius: 8px;
-      background: rgba(6, 10, 29, 0.9);
-      border: 1px solid rgba(255,255,255,0.06);
-      margin-bottom: 5px;
-    }
-
-    .saved-title {
-      font-weight: 500;
-      margin-bottom: 2px;
-    }
-
-    .saved-meta {
-      font-size: 11px;
-      color: var(--muted);
-    }
-
-    .saved-url {
-      font-size: 11px;
-      color: #8c92c4;
-      word-break: break-all;
-    }
-
-    .save-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    .result-box {
       margin-top: 8px;
-      gap: 8px;
-    }
-
-    .btn-full {
-      flex: 0 0 auto;
-    }
-
-    .save-status {
-      flex: 1 1 auto;
-      text-align: right;
-      font-size: 11px;
+      padding: 8px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 6px;
+      font-size: 12px;
+      max-height: 150px;
+      overflow-y: auto;
     }
   </style>
 </head>
 <body>
-  <h3>Start-to-Act • Scholarship Copilot</h3>
-  <div class="subtitle">Turn this scholarship page into a 20-min micro-start block and keep track of saved opportunities.</div>
 
-  <button id="open-profile">Profile</button>
-
-  <!-- ⭐ SAVED SCHOLARSHIPS ⭐ -->
-  <h4>Saved Scholarships</h4>
-  <button id="btn-show-saved">Show Saved</button>
-  <div id="saved-list" style="margin-top:6px; font-size:13px;"></div>
-
-  <!-- Micro-start section -->
-  <div class="section-card">
-    <div class="section-header">
-      <div class="section-title">Micro-start plan</div>
-    </div>
-  <hr style="margin:12px 0" />
-
-  <h3>ADHD Scholarship Copilot (Demo)</h3>
-
-  <!-- NEW FOCUS MODE CONTROLS -->
-  <span class="small-label">Focus mode:</span>
-  <button id="focusNone" type="button">None</button>
-  <button id="focusCircle" type="button">Circle</button>
-  <button id="focusRect" type="button">Rectangle</button>
-
-    <textarea id="goal" rows="3"
-      placeholder="Optional: your twist here, e.g. “Tailor CV for this scholarship”"></textarea>
-
-    <button id="plan" class="btn-primary">Generate micro-start</button>
-    <div id="result" class="status" style="margin-top:8px;"></div>
-  </div>
-  <button id="plan">Micro-start</button>
-
-  <div id="result" class="muted" style="margin-top:10px;"></div>
-
-  <!-- Requirements scan -->
-  <div class="section-card">
-    <div class="section-header">
-      <div class="section-title">Requirements scan</div>
-      <button id="btn-scan" class="btn-chip">Scan this page</button>
-    </div>
-    <div id="req-status" class="status"></div>
-    <div id="req-out" class="req-out"></div>
-  </div>
-
-  <!-- Saved scholarships -->
-  <div class="section-card">
-    <div class="section-header">
-      <div class="section-title">Saved scholarships</div>
-      <button id="btn-show-saved" class="btn-chip">Refresh</button>
-    </div>
-
-    <div id="saved-list" class="saved-list"></div>
-
-    <div class="save-footer">
-      <button id="btn-save" class="btn-secondary btn-full">Save current page</button>
-      <div id="save-status" class="save-status muted"></div>
+  <!-- Top bar: saved + profile -->
+  <div class="row" style="margin-bottom: 10px;">
+    <div style="font-weight:700; color:#fff;">⚡ Copilot</div>
+    <div>
+      <button id="btn-show-saved" title="My Saved Scholarships">🔖 Saved</button>
+      <button id="open-profile" title="My Profile">👤 Profile</button>
     </div>
   </div>
 
-  <script src="popup.js"></script>
+  <!-- Saved scholarships list -->
+  <div id="saved-list" class="result-box hidden" style="margin-bottom:10px; border:1px solid var(--accent);"></div>
+
+  <!-- Focus & Shield card -->
+  <div class="card">
+    <div class="row">
+      <span class="muted">FOCUS & SHIELD</span>
+      <div class="toggle-group" id="spotlight-controls">
+        <button data-mode="none">OFF</button>
+        <button data-mode="circle" class="active">CIRCLE</button>
+        <button data-mode="rect">RECT</button>
+      </div>
+    </div>
+
+    <textarea id="goal" rows="2" placeholder="Goal: e.g. 'Fill out personal info'"></textarea>
+    
+    <div class="row" style="margin-top:4px;">
+      <button id="plan" style="flex:1;">✨ AI Micro-Start</button>
+    </div>
+    <div id="ai-result" class="muted" style="margin-top:4px;"></div>
+
+    <div class="row" style="margin-top:10px; background:#0f172a; padding:6px; border-radius:6px;">
+      <div class="col" style="flex:1; gap:2px;">
+        <span style="font-size:9px; color:#64748b;">BLOCK (MIN)</span>
+        <input id="focus-minutes" type="number" value="20" min="5" max="120" style="border:none; border-bottom:1px solid #334155; text-align:center;">
+      </div>
+      <div class="col" style="flex:1; gap:2px;">
+        <span style="font-size:9px; color:#64748b;">CHECK-IN (MIN)</span>
+        <input id="focus-checkins" type="text" value="5, 12" style="border:none; border-bottom:1px solid #334155; text-align:center;">
+      </div>
+    </div>
+
+    <button id="btn-start" class="btn-success">🚀 START FOCUS MODE</button>
+    <button id="btn-end" style="width:100%; margin-top:4px;">⏹ End focus early</button>
+
+    <!-- Relax game manual trigger -->
+    <div class="row" style="margin-top:6px;">
+      <select id="relax-game-select" style="flex:1; font-size:11px; padding:4px 6px;">
+        <option value="sniper">Visual search (dogs / numbers / shapes)</option>
+        <option value="chain">Focus chain only</option>
+      </select>
+      <button id="btn-relax-game" style="white-space:nowrap;">🧩 Relax game</button>
+    </div>
+  </div>
+
+  <!-- Scholarship tools card -->
+  <div class="card">
+    <div class="muted" style="margin-bottom:6px; text-transform:uppercase;">Scholarship Tools</div>
+    
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+      <button id="btn-scan">🔍 Scan Page</button>
+      <button id="btn-check-elig">⚖️ Check Eligibility</button>
+      <button id="btn-save">💾 Save Page</button>
+      <button id="btn-autofill">✍️ Autofill (Beta)</button>
+    </div>
+
+    <div id="tool-status" class="muted" style="margin-top:4px;"></div>
+    <div id="tool-output" class="result-box hidden"></div>
+  </div>
+
+  <!-- NOTE: library card temporarily removed until backend is ready -->
+
+  <script type="module" src="popup.js"></script>
 </body>
 </html>

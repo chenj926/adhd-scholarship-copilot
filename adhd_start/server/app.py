@@ -11,9 +11,20 @@ from typing import List, Optional, Dict, Any
 
 from server.schemas import (
     PlanIn, PlanOut, ParseIn, ParseOut,
-    BookmarkIn, BookmarkOut, BookmarkStatusIn
+    BookmarkIn, BookmarkOut, BookmarkStatusIn,
+    EligibilityIn, EligibilityOut,
 )
+
 from server.llm import extract_fields_rag_or_llm, make_plan_with_llm
+
+
+
+from typing import List, Optional
+from fastapi import FastAPI, HTTPException, Query
+
+from .scholarship_models import Scholarship
+from .scholarship_repo import scholarship_repo
+
 
 app = FastAPI()
 
@@ -139,3 +150,141 @@ def update_bookmark_status(payload: BookmarkStatusIn):
     from server.user_repo import set_bookmark_status  # type: ignore
     bm = set_bookmark_status(payload.user_id, payload.id, payload.status)
     return BookmarkOut(**bm)
+
+# List scholarships with optional filters
+@app.get("/scholarships", response_model=List[Scholarship])
+def list_scholarships(
+    q: Optional[str] = Query(default=None, description="Full-text search query"),
+    source_site: Optional[str] = Query(default=None, description="Filter by source site"),
+    level_of_study: Optional[str] = Query(default=None, description="Filter by level of study"),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+):
+    """
+    Return a list of scholarships from your curated JSON file.
+    """
+    return scholarship_repo.list(
+        q=q,
+        source_site=source_site,
+        level_of_study=level_of_study,
+        limit=limit,
+        offset=offset,
+    )
+
+
+# Get full details for a single scholarship
+@app.get("/scholarships/{scholarship_id}", response_model=Scholarship)
+def get_scholarship(scholarship_id: str):
+    """
+    Get details (including winner stories) for a single scholarship.
+    """
+    sch = scholarship_repo.get(scholarship_id)
+    if not sch:
+        raise HTTPException(status_code=404, detail="Scholarship not found")
+    return sch
+
+@app.post("/eligibility", response_model=EligibilityOut)
+def check_eligibility(payload: EligibilityIn) -> EligibilityOut:
+    """
+    Simple rule-based eligibility check using the scholarship page text
+    and the user's profile from the extension.
+
+    It returns:
+      - eligible: True/False
+      - reasons: explanation for the decision
+      - missing_info: things the profile is missing / unclear
+    """
+    text = (payload.text or "").lower()
+    profile = payload.profile or {}
+
+    reasons: list[str] = []
+    missing: list[str] = []
+    eligible = True
+
+    # ---- Normalize profile fields ----
+    program = (profile.get("program") or "").strip().lower()
+    country = (profile.get("country") or "").strip().lower()
+    province = (profile.get("province") or "").strip().lower()
+
+    citizen_flag = bool(profile.get("citizen"))      # checkbox in profile.html
+    pr_flag = bool(profile.get("pr"))
+    other_status = bool(profile.get("otherStatus"))
+
+    # If they say country = Canada and not "other / international",
+    # treat them as Canadian-ish even if the checkbox is missing.
+    is_canadian_country = country == "canada"
+    has_canadian_status = citizen_flag or pr_flag or (is_canadian_country and not other_status)
+
+    # ---- Citizenship requirements ----
+    if "canadian citizen" in text or "citizen of canada" in text:
+        # If we have *no* information at all, treat as missing instead of hard fail
+        if not citizen_flag and not pr_flag and not is_canadian_country:
+            missing.append(
+                "Scholarship requires Canadian citizenship, but your profile citizenship section looks empty."
+            )
+        elif not has_canadian_status:
+            eligible = False
+            reasons.append(
+                "Scholarship requires Canadian citizenship, and your profile does not show that."
+            )
+
+    # ---- PR or citizen requirements ----
+    if "permanent resident" in text or "permanent resident of canada" in text:
+        if not (pr_flag or citizen_flag or is_canadian_country):
+            if not pr_flag:
+                missing.append(
+                    "Scholarship mentions Canadian permanent residents; your PR checkbox is not ticked."
+                )
+            else:
+                eligible = False
+                reasons.append(
+                    "Scholarship requires Canadian PR or citizenship, which your profile does not show."
+                )
+
+    # ---- Engineering student requirement (very rough heuristic) ----
+    if "engineering" in text and "student" in text:
+        if not program:
+            missing.append(
+                "Scholarship appears to be for engineering students; your program field is empty."
+            )
+        elif "engineer" not in program and "eng" not in program:
+            eligible = False
+            reasons.append(
+                f"Scholarship appears to be for engineering students, but your program is '{profile.get('program') or 'not set'}'."
+            )
+
+    # ---- Studying in Canada requirement ----
+    if (
+        "post-secondary institution in canada" in text
+        or "university in canada" in text
+        or "canadian institution" in text
+        or "canadian university" in text
+        or "in canada" in text
+    ):
+        if not country and not province:
+            missing.append(
+                "Scholarship mentions studying in Canada, but your country/province are not set in your profile."
+            )
+        elif "canada" not in country:
+            eligible = False
+            reasons.append(
+                "Scholarship requires studying in Canada, but your profile country is not Canada."
+            )
+
+    # ---- Undergrad hint ----
+    if "undergraduate" in text or "undergrad" in text:
+        missing.append(
+            "Scholarship mentions undergraduates; make sure you are currently in an undergraduate program."
+        )
+
+    # If nothing obviously wrong, add a gentle positive reason
+    if eligible and not reasons:
+        reasons.append(
+            "No conflicting requirements detected based on your profile and this page text."
+        )
+
+    return EligibilityOut(
+        eligible=eligible,
+        reasons=reasons,
+        missing_info=missing,
+    )
