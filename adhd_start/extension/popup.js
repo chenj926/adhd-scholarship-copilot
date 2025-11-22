@@ -222,10 +222,30 @@ async function onShowSaved() {
 function main() {
   console.log("popup loaded");
 
+  const $ = (s) => document.querySelector(s);
+
   const btn = $("#plan");
   if (btn) {
     btn.addEventListener("click", onClickPlan);
   }
+
+  $("#plan").addEventListener("click", async () => {
+    // ... capture page, call backend, show micro-start ...
+    chrome.runtime.sendMessage({
+      type: "START_BLOCK",
+      minutes: data.block_minutes || 20,
+      checkIns: data.check_ins || ["T+5","T+12"]
+    });
+  });
+
+  $("#focus").addEventListener("click", async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    files: ["spotlight.js"]
+  });
+});
 
   const scanBtn = document.getElementById("btn-scan");
   if (scanBtn) {
