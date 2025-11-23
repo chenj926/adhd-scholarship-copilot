@@ -1,8 +1,7 @@
 module.exports = {
   content: [
-    "./popup.html",
-    "./profile.html",
     "./src/**/*.{js,jsx,ts,tsx}",
+    "./src/**/*.html"
   ],
   theme: {
     extend: {},

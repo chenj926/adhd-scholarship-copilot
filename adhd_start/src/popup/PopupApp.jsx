@@ -365,6 +365,7 @@ export default function PopupApp() {
 
   // Profile completeness
   const [profileComplete, setProfileComplete] = useState(false);
+  const [profileInitials, setProfileInitials] = useState(""); 
 
   // Relax game dropdown
   const [relaxGame, setRelaxGame] = useState("sniper");
@@ -373,40 +374,43 @@ export default function PopupApp() {
   // Restore + persist popup state (goal, minutes, check-ins)
   // -------------------------------------------------------------------------
   useEffect(() => {
-    chrome.storage.local.get(["popupState"], (res) => {
-      const s = res.popupState;
-      if (!s) return;
-      setGoal(s.goal || "");
-      setFocusMinutes(s.minutes || "20");
-      setCheckinsInput(s.checkins || "5, 12");
-    });
+    // Helper to calculate status
+    const checkProfile = (p) => {
+      const pObj = p || {};
+      const isComplete =
+        pObj.firstName &&
+        pObj.lastName &&
+        pObj.email &&
+        pObj.school &&
+        pObj.program &&
+        pObj.expectedCompletion;
+      
+      // Logic from your vanilla popup.js to generate initials
+      let initials = "";
+      if (pObj.firstName && pObj.firstName.trim()) initials += pObj.firstName.trim()[0];
+      if (pObj.lastName && pObj.lastName.trim()) initials += pObj.lastName.trim()[0];
+      
+      setProfileComplete(Boolean(isComplete));
+      setProfileInitials(initials.toUpperCase());
+    };
+
+    // chrome.storage.local.get(["popupState"], (res) => {
+    //   const s = res.popupState;
+    //   if (!s) return;
+    //   setGoal(s.goal || "");
+    //   setFocusMinutes(s.minutes || "20");
+    //   setCheckinsInput(s.checkins || "5, 12");
+    // });
 
     // initial profile completeness (same logic as service-worker + popup.js)
     chrome.storage.sync.get("userProfile", (res) => {
-      const p = res.userProfile || {};
-      const isComplete =
-        p &&
-        p.firstName &&
-        p.lastName &&
-        p.email &&
-        p.school &&
-        p.program &&
-        p.expectedCompletion;
-      setProfileComplete(Boolean(isComplete));
+      checkProfile(res.userProfile);
     });
 
+    // Listener for updates
     const listener = (msg) => {
       if (!msg || msg.type !== "PROFILE_UPDATED") return;
-      const p = msg.profile || {};
-      const isComplete =
-        p &&
-        p.firstName &&
-        p.lastName &&
-        p.email &&
-        p.school &&
-        p.program &&
-        p.expectedCompletion;
-      setProfileComplete(Boolean(isComplete));
+      checkProfile(msg.profile);
     };
 
     chrome.runtime.onMessage.addListener(listener);
@@ -902,8 +906,10 @@ export default function PopupApp() {
                 : "Click to set up your profile for autofill and smarter eligibility."
             }
             onClick={() => {
+              // Note: In React build, profile.html is likely at the root of dist or assets
+              // Use chrome.runtime.getURL to be safe
               chrome.windows.create({
-                url: PROFILE_PAGE_URL,
+                url: chrome.runtime.getURL("src/profile/index.html"), // Dev path, Vite handles build path mapping
                 type: "popup",
                 width: 900,
                 height: 900,
@@ -913,6 +919,12 @@ export default function PopupApp() {
           >
             <span className="mr-1">👤</span>
             <span>Profile</span>
+            {/* Restored Initials Logic */}
+            {profileInitials && (
+              <span className="ml-1 text-[9px] font-bold bg-slate-700 px-1 rounded-full">
+                {profileInitials}
+              </span>
+            )}
             <span
               className={`ml-1 h-2 w-2 rounded-full ${
                 profileComplete ? "bg-emerald-400" : "bg-slate-500"

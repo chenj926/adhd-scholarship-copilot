@@ -1,8 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "ADHD Scholarship Copilot (Demo)",
-  "version": "0.3.0",
-  "description": "ADHD micro-start coach — demo on real pages, backend on localhost.",
+  "name": "ADHD Scholarship Copilot (React)",
+  "version": "0.4.0",
   "permissions": [
     "storage",
     "alarms",
@@ -12,21 +11,14 @@
     "contextMenus"
   ],
   "host_permissions": [
-    "http://localhost:8000/*",
-    "http://127.0.0.1:8000/*",
-    "http://0.0.0.0:8000/*"
+    "http://localhost:8000/*"
   ],
   "background": {
-    "service_worker": "service-worker.js"
+    "service_worker": "service-worker.js" 
   },
   "action": {
     "default_title": "ADHD Scholarship Copilot",
-    "default_popup": "popup.html"
-  },
-  "icons": {
-    "16": "icon16.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
+    "default_popup": "src/popup/index.html"
   },
   "content_scripts": [
     {
@@ -37,7 +29,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["profile.html", "profile.js"],
+      "resources": ["src/profile/index.html"],
       "matches": ["<all_urls>"]
     }
   ]
