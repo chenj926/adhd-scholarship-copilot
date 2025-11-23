@@ -59,11 +59,55 @@
         "url": "https://www.ccohs.ca/scholarships/cbradley/application",
         "title": "CCOHS: Chad Bradley Scholarship Award – Application Form",
         "source_site": "www.ccohs.ca",
-        "status": "saved",
+        "status": "dropped",
         "deadline": null,
         "tags": [],
         "created_at": "2025-11-22T02:58:04.348993+00:00",
-        "updated_at": "2025-11-23T03:43:03.510899+00:00"
+        "updated_at": "2025-11-23T05:11:20.958532+00:00"
+      },
+      {
+        "id": "bm_14befeb9eea6",
+        "url": "https://undergrad.engineering.utoronto.ca/fees-financial-aid/scholarships/",
+        "title": "Scholarships & Opportunities - Current Engineering Undergraduates",
+        "source_site": null,
+        "status": "saved",
+        "deadline": null,
+        "tags": [],
+        "created_at": "2025-11-23T04:21:02.797735+00:00",
+        "updated_at": "2025-11-23T04:21:02.797735+00:00"
+      },
+      {
+        "id": "bm_d83649b04b7a",
+        "url": "https://www.ccohs.ca/scholarships/dmartin",
+        "title": "CCOHS: Dick Martin Scholarship Award",
+        "source_site": null,
+        "status": "dropped",
+        "deadline": null,
+        "tags": [],
+        "created_at": "2025-11-23T04:36:27.598004+00:00",
+        "updated_at": "2025-11-23T06:25:20.235578+00:00"
+      },
+      {
+        "id": "bm_37c311ed97ef",
+        "url": "https://casi.ca/Student-Awards/#CharlesLuttman",
+        "title": "CASI / IASC - Student Awards",
+        "source_site": null,
+        "status": "dropped",
+        "deadline": null,
+        "tags": [],
+        "created_at": "2025-11-23T05:09:37.876203+00:00",
+        "updated_at": "2025-11-23T05:10:27.450382+00:00"
+      },
+      {
+        "id": "bm_6f3fdbe9b2b8",
+        "url": "https://www.ccohs.ca/scholarships/dmartin/application",
+        "title": "CCOHS: Dick Martin Scholarship Award – Application Form",
+        "source_site": null,
+        "status": "dropped",
+        "deadline": null,
+        "tags": [],
+        "created_at": "2025-11-23T05:10:32.018243+00:00",
+        "updated_at": "2025-11-23T06:26:03.717684+00:00"
       }
     ],
     "wins": [],

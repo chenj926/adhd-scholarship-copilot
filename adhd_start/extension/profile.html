@@ -1,11 +1,7 @@
 <!doctype html>
 <html lang="en">
-<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>My Profile – Start-to-Act</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="profile.css" />
   <title>My Profile – Start-to-Act</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="profile.css" />
@@ -18,16 +14,8 @@
         This information stays on your device and is used to auto-fill applications.
       </p>
     </header>
-  <main class="page">
-    <header class="page-header">
-      <h1>Profile</h1>
-      <p class="page-subtitle">
-        This information stays on your device and is used to auto-fill applications.
-      </p>
-    </header>
 
     <form id="profile-form">
-      <!-- Basic Info -->
       <section class="card">
         <h2>Basic Information</h2>
 
@@ -54,7 +42,6 @@
         </div>
       </section>
 
-      <!-- Address -->
       <section class="card">
         <h2>Address</h2>
 
@@ -93,10 +80,9 @@
         </div>
       </section>
 
-      <!-- Status -->
       <section class="card">
         <h2>Residency Status</h2>
-        <p class="hint">Check all that apply.</p>
+        <p class="hint">Check all that apply (Used for eligibility checks).</p>
         <div class="grid grid-3">
           <label class="checkbox">
             <input id="citizen" name="citizen" type="checkbox" />
@@ -115,7 +101,6 @@
         </div>
       </section>
 
-      <!-- Education -->
       <section class="card">
         <h2>Education</h2>
 
@@ -141,7 +126,17 @@
               required
             />
           </div>
-
+          <div class="field">
+            <label for="degreeType">Degree type</label>
+            <select id="degreeType" name="degreeType">
+              <option value="">Select…</option>
+              <option value="undergrad">Undergraduate / Bachelor</option>
+              <option value="masters">Master's</option>
+              <option value="phd">PhD</option>
+              <option value="college">College / Diploma</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
           <div class="field">
             <label for="expectedCompletion">Expected date of completion<span class="required">*</span></label>
             <input
@@ -154,14 +149,11 @@
         </div>
       </section>
 
-      <!-- Resume / Activities -->
       <section class="card">
         <h2>Resume</h2>
         <p class="hint">
-          Summarize your key activities, experiences, and skills. This can be reused
-          when filling out applications.
+          Summarize your key activities.
         </p>
-
         <div class="field">
           <label for="resumeSummary">Activity Summary</label>
           <textarea
@@ -173,12 +165,10 @@
         </div>
       </section>
 
-      <!-- References -->
       <section class="card">
         <h2>References</h2>
-        <p class="hint">Up to 3 references. Supporting letter can be a short note or link.</p>
+        <p class="hint">Up to 3 references.</p>
 
-        <!-- Reference 1 -->
         <div class="ref-block">
           <h3>Reference 1</h3>
           <div class="grid grid-3">
@@ -201,12 +191,10 @@
               id="ref1Letter"
               name="ref1Letter"
               rows="3"
-              placeholder="Paste summary, link, or notes about this reference."
             ></textarea>
           </div>
         </div>
 
-        <!-- Reference 2 -->
         <div class="ref-block">
           <h3>Reference 2</h3>
           <div class="grid grid-3">
@@ -229,12 +217,10 @@
               id="ref2Letter"
               name="ref2Letter"
               rows="3"
-              placeholder="Paste summary, link, or notes about this reference."
             ></textarea>
           </div>
         </div>
 
-        <!-- Reference 3 -->
         <div class="ref-block">
           <h3>Reference 3</h3>
           <div class="grid grid-3">
@@ -257,13 +243,11 @@
               id="ref3Letter"
               name="ref3Letter"
               rows="3"
-              placeholder="Paste summary, link, or notes about this reference."
             ></textarea>
           </div>
         </div>
       </section>
 
-      <!-- Actions -->
       <section class="actions">
         <button type="submit" id="saveBtn">Save profile</button>
         <button type="button" id="resetBtn" class="secondary">Clear saved data</button>
@@ -271,8 +255,6 @@
       </section>
     </form>
   </main>
-
-  <script src="profile.js" defer></script>
   <script src="profile.js" defer></script>
 </body>
 </html>

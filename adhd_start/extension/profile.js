@@ -37,7 +37,8 @@ function readForm() {
     program: form.program.value.trim(),
     yearsCompleted: form.yearsCompleted.value,
     expectedCompletion: form.expectedCompletion.value,
-
+    degreeType: form.degreeType.value, // Added logic from teammate
+    
     // Free-form resume summary
     resumeSummary: form.resumeSummary.value.trim(),
 
@@ -86,7 +87,8 @@ function writeForm(data = {}) {
   form.program.value = data.program || "";
   form.yearsCompleted.value = data.yearsCompleted || "";
   form.expectedCompletion.value = data.expectedCompletion || "";
-
+  form.degreeType.value = data.degreeType || ""; // Added logic from teammate
+  
   form.resumeSummary.value = data.resumeSummary || "";
 
   const refs = data.references || [];

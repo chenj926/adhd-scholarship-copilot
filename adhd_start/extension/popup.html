@@ -21,7 +21,26 @@
       background: var(--bg);
       color: var(--text);
       font-size: 13px;
+      /* Prevent main body scroll if content fits */
+      overflow-y: auto;
     }
+
+    /* === MODERN SCROLLBAR CSS === */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent; 
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155; 
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569; 
+    }
+    /* ============================ */
     
     .hidden { display: none !important; }
     .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -100,25 +119,23 @@
       border-radius: 6px;
       font-size: 12px;
       max-height: 150px;
-      overflow-y: auto;
+      overflow-y: auto; /* Uses the new scrollbar */
     }
   </style>
 </head>
 <body>
 
-  <!-- Top bar: saved + profile -->
   <div class="row" style="margin-bottom: 10px;">
     <div style="font-weight:700; color:#fff;">⚡ Copilot</div>
     <div>
       <button id="btn-show-saved" title="My Saved Scholarships">🔖 Saved</button>
+      <button id="btn-open-library" title="Scholarship Library">📚 Library</button>
       <button id="open-profile" title="My Profile">👤 Profile</button>
     </div>
   </div>
 
-  <!-- Saved scholarships list -->
   <div id="saved-list" class="result-box hidden" style="margin-bottom:10px; border:1px solid var(--accent);"></div>
 
-  <!-- Focus & Shield card -->
   <div class="card">
     <div class="row">
       <span class="muted">FOCUS & SHIELD</span>
@@ -150,23 +167,21 @@
     <button id="btn-start" class="btn-success">🚀 START FOCUS MODE</button>
     <button id="btn-end" style="width:100%; margin-top:4px;">⏹ End focus early</button>
 
-    <!-- Relax game manual trigger -->
     <div class="row" style="margin-top:6px;">
       <select id="relax-game-select" style="flex:1; font-size:11px; padding:4px 6px;">
-        <option value="sniper">Visual search (dogs / numbers / shapes)</option>
+        <option value="sniper">Visual search (dogs / numbers)</option>
         <option value="chain">Focus chain only</option>
       </select>
       <button id="btn-relax-game" style="white-space:nowrap;">🧩 Relax game</button>
     </div>
   </div>
 
-  <!-- Scholarship tools card -->
   <div class="card">
     <div class="muted" style="margin-bottom:6px; text-transform:uppercase;">Scholarship Tools</div>
     
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
-      <button id="btn-scan">🔍 Scan Page</button>
-      <button id="btn-check-elig">⚖️ Check Eligibility</button>
+      <button id="btn-scan">🗒️ Scholarship Summary</button>
+      <button id="btn-check-elig">⚖️ Eligibility</button>
       <button id="btn-save">💾 Save Page</button>
       <button id="btn-autofill">✍️ Autofill (Beta)</button>
     </div>
@@ -175,6 +190,24 @@
     <div id="tool-output" class="result-box hidden"></div>
   </div>
 
-  <script type="module" src="popup.js"></script>
+  <div id="library-card" class="card hidden">
+    <div class="row" style="margin-bottom:6px;">
+      <div class="muted" style="text-transform:uppercase;">Scholarship Library</div>
+      <input
+        id="library-search"
+        type="text"
+        placeholder="Search..."
+        style="font-size:11px; padding:4px 6px; max-width:180px;"
+      >
+    </div>
+
+    <button id="btn-load-library" style="width:100%; margin-bottom:4px;">🔎 Load Scholarships</button>
+    <div id="library-status" class="muted" style="margin-top:2px;"></div>
+
+    <div id="library-list" class="result-box" style="max-height:120px;"></div>
+    <div id="library-detail" class="result-box" style="max-height:120px;"></div>
+  </div>
+
+  <script src="popup.js"></script>
 </body>
 </html>
