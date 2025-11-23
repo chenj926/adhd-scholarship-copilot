@@ -54,3 +54,13 @@
 {"user_id": "demo-user", "plan_id": null, "rating": 0, "reasons": [], "nudge_result": {}, "bad_sources": [], "comment": "", "timestamp": "2025-11-23T06:23:00.615499"}
 {"user_id": "demo-user", "plan_id": null, "rating": 2, "reasons": ["steps_wrong"], "nudge_result": {}, "bad_sources": [], "comment": "", "timestamp": "2025-11-23T06:57:32.047570"}
 {"user_id": "demo-user", "plan_id": null, "rating": 3, "reasons": [], "nudge_result": {}, "bad_sources": [], "comment": "", "timestamp": "2025-11-23T07:38:55.787865"}
+{"user_id": "demo-user", "plan_id": null, "rating": 3, "reasons": [], "nudge_result": {}, "bad_sources": [], "comment": "gooood", "timestamp": "2025-11-23T08:15:55.548785"}
+{"user_id": "demo-user", "plan_id": null, "rating": 1, "reasons": [], "nudge_result": {}, "bad_sources": [], "comment": "", "timestamp": "2025-11-23T08:16:08.500791"}
+{"user_id": "demo-user", "plan_id": null, "rating": 3, "reasons": [], "nudge_result": {}, "bad_sources": [], "comment": "", "timestamp": "2025-11-23T08:16:19.585321"}
+{"user_id": "demo-user", "plan_id": null, "rating": 2, "reasons": ["ui_bug"], "nudge_result": {}, "bad_sources": [], "comment": "", "timestamp": "2025-11-23T08:16:50.506803"}
+{"user_id": "demo-user", "plan_id": null, "rating": 3, "reasons": [], "nudge_result": {}, "bad_sources": [], "comment": "", "timestamp": "2025-11-23T08:25:20.841316"}
+{"user_id": "demo-user", "plan_id": null, "rating": 3, "reasons": [], "nudge_result": {}, "bad_sources": [], "comment": "", "timestamp": "2025-11-23T08:33:04.926782"}
+{"user_id": "demo-user", "plan_id": null, "rating": 3, "reasons": [], "nudge_result": {}, "bad_sources": [], "comment": "", "timestamp": "2025-11-23T08:34:35.345879"}
+{"user_id": "demo-user", "plan_id": null, "rating": 3, "reasons": [], "nudge_result": {}, "bad_sources": [], "comment": "", "timestamp": "2025-11-23T08:39:30.717481"}
+{"user_id": "demo-user", "plan_id": null, "rating": 3, "reasons": [], "nudge_result": {}, "bad_sources": [], "comment": "", "timestamp": "2025-11-23T08:45:23.357524"}
+{"user_id": "demo-user", "plan_id": null, "rating": 2, "reasons": [], "nudge_result": {}, "bad_sources": [], "comment": "", "timestamp": "2025-11-23T08:45:48.539289"}
