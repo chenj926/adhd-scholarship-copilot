@@ -1,14 +1,13 @@
-// service-worker.js
+// service-worker.js (MV3 background)
 
-// Schedule Chrome alarms for check-ins + end of focus block
 function scheduleCheckIns(minutes, checkIns) {
   const now = Date.now();
-
   const add = (m) =>
     chrome.alarms.create(`ci_${m}`, { when: now + m * 60 * 1000 });
 
   (checkIns || []).forEach((ci) => {
-    const m = parseInt(ci.split("+")[1], 10) || 5;
+    const parts = String(ci).split("+");
+    const m = parseInt(parts[1], 10) || 5;
     add(m);
   });
 
@@ -17,7 +16,7 @@ function scheduleCheckIns(minutes, checkIns) {
   });
 }
 
-// Notify the active tab that the focus block ended
+// Notify active tab that focus block has ended
 function broadcastEndBlock(reason) {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tab = tabs[0];
@@ -31,13 +30,11 @@ function broadcastEndBlock(reason) {
   });
 }
 
-// Handle messages from popup, content scripts, and profile.html
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || typeof msg.type !== "string") return;
 
-  // START_BLOCK from popup / overlay
+  // Focus START
   if (msg.type === "START_BLOCK") {
-    // Clear any previous alarms and set new ones
     chrome.alarms.clearAll(() => {
       scheduleCheckIns(msg.minutes, msg.checkIns);
     });
@@ -50,7 +47,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     });
   }
 
-  // END_BLOCK from popup / overlay (manual stop)
+  // Focus END (manual stop from popup / overlay)
   if (msg.type === "END_BLOCK") {
     chrome.alarms.clearAll();
 
@@ -61,11 +58,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       message: "You stopped the focus block.",
     });
 
-    // Let the page clean up HUD / shield / feedback
     broadcastEndBlock(msg.reason || "manual-stop");
   }
 
-  // PROFILE_UPDATED from profile.html – reflect profile state on the extension icon
+  // Profile updated (from profile.html) – update extension badge
   if (msg.type === "PROFILE_UPDATED") {
     const p = msg.profile || {};
     const isComplete =
@@ -84,7 +80,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-// Alarm callbacks: check-ins + natural end of focus block
+// Handle timers: check-ins + natural end of block
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name.startsWith("ci_")) {
     chrome.notifications.create({
@@ -100,11 +96,10 @@ chrome.alarms.onAlarm.addListener((alarm) => {
       type: "basic",
       iconUrl: "icon48.png",
       title: "Time!",
-      message:
-        "2-min debrief: What worked? What to change next time?",
+      message: "2-min debrief: What worked? What to change next time?",
     });
 
-    // Focus session ended via timer, let the page know
+    // Timer-based end – let the content scripts clean up UI and show feedback
     broadcastEndBlock("timer");
   }
 });

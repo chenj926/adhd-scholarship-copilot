@@ -151,7 +151,13 @@ async function clearProfile() {
   }
 
   try {
+    // Remove from storage
     await chrome.storage.sync.remove(STORAGE_KEY);
+
+    // Tell popup + background that profile is now empty
+    chrome.runtime.sendMessage({ type: "PROFILE_UPDATED", profile: null });
+
+    // Reset form UI
     writeForm({});
     setStatus("Saved profile cleared.", "success");
   } catch (err) {

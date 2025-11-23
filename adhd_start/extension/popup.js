@@ -75,6 +75,54 @@ function getProfileFromStorage() {
   });
 }
 
+// Read profile and update the profile button in the popup
+async function updateProfileIcon() {
+  const btn = document.getElementById("open-profile");
+  if (!btn) return;
+
+  try {
+    const { userProfile } = await chrome.storage.sync.get("userProfile");
+    const p = userProfile || {};
+
+    // Consider "logged in / filled" if we have at least some core fields
+    const hasProfile =
+      p &&
+      (p.firstName || p.lastName || p.email || p.school || p.program);
+
+    // Build initials like "JC"
+    let initials = "";
+    if (p.firstName && p.firstName.trim()) {
+      initials += p.firstName.trim()[0];
+    }
+    if (p.lastName && p.lastName.trim()) {
+      initials += p.lastName.trim()[0];
+    }
+    initials = initials.toUpperCase();
+
+    // Data attributes for CSS styling
+    btn.dataset.status = hasProfile ? "complete" : "empty";
+    btn.dataset.initials = initials;
+
+    // Optional: show initials inside the button
+    let pill = btn.querySelector(".profile-initials");
+    if (!pill) {
+      pill = document.createElement("span");
+      pill.className = "profile-initials";
+      btn.appendChild(pill);
+    }
+
+    pill.textContent = hasProfile && initials ? initials : "";
+    pill.style.display = hasProfile && initials ? "inline-flex" : "none";
+
+    // Tooltip
+    btn.title = hasProfile
+      ? `Profile: ${p.firstName || ""} ${p.lastName || ""}`.trim()
+      : "Click to set up your profile for autofill and eligibility checks.";
+  } catch (err) {
+    console.warn("[popup] updateProfileIcon failed:", err);
+  }
+}
+
 // -----------------------------------------------------------------------------
 // Profile icon state helper: reflect whether profile is "complete"
 // -----------------------------------------------------------------------------
@@ -729,23 +777,60 @@ async function onShowSavedToggle() {
   }
 }
 
+// --- ROBUST SAVE LOGIC (with fallback + better error surface) ---
 async function onSavePage() {
   const status = $("#tool-status");
-  if (status) status.textContent = "Saving...";
+  if (status) {
+    status.textContent = "Saving...";
+    status.style.color = "";
+  }
 
   try {
-    const tab = await getActiveTab();
-    const resp = await fetch(BOOKMARK_URL, {
+    // More robust tab lookup – active tab in last focused window
+    const tabs = await chrome.tabs.query({
+      active: true,
+      lastFocusedWindow: true,
+    });
+    const tab = tabs[0];
+
+    if (!tab || !tab.url) {
+      throw new Error("No active page to save.");
+    }
+
+    const payload = {
+      user_id: "demo-user",
+      url: tab.url,
+      title: tab.title || tab.url,
+    };
+
+    // Primary attempt: POST /bookmark
+    let resp = await fetch(BOOKMARK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        user_id: "demo-user",
-        url: tab.url,
-        title: tab.title,
-      }),
+      body: JSON.stringify(payload),
     });
 
-    if (!resp.ok) throw new Error("Server returned error");
+    // Fallback: some backends use /bookmarks for POST as well
+    if (!resp.ok) {
+      console.warn(
+        "[popup] /bookmark returned",
+        resp.status,
+        "trying /bookmarks fallback...",
+      );
+      const altResp = await fetch(`${API_BASE}/bookmarks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!altResp.ok) {
+        const text = await altResp.text().catch(() => "");
+        throw new Error(
+          `Server error: ${altResp.status} ${text ? "– " + text : ""}`,
+        );
+      }
+      resp = altResp;
+    }
 
     if (status) {
       status.textContent = "Saved!";
@@ -756,17 +841,20 @@ async function onSavePage() {
       }, 2000);
     }
 
+    // If "Saved" panel is open, refresh it
     const listEl = $("#saved-list");
     if (listEl && !listEl.classList.contains("hidden")) {
-      onShowSavedToggle();
-      setTimeout(onShowSavedToggle, 50);
+      onShowSavedToggle(); // hide
+      setTimeout(onShowSavedToggle, 50); // show + reload
     }
   } catch (e) {
+    console.error("[popup] Save failed:", e);
     if (status) {
-      status.textContent = "Save failed.";
+      status.textContent = `Save failed${
+        e && e.message ? ": " + e.message : "."
+      }`;
       status.style.color = "#f87171"; // Red
     }
-    console.error("Save failed", e);
   }
 }
 
@@ -776,45 +864,47 @@ async function onSavePage() {
 document.addEventListener("DOMContentLoaded", () => {
   restorePopupState();
   bindSpotlightControls();
-  updateProfileIcon(); // reflect current profile state on the icon
+  updateProfileIcon(); // reflect initial profile state in the button
+
+  // AI micro-start: popup_micro_start.js also attaches to #plan
+  $("#plan")?.addEventListener("click", onPlanClick); // keep as fallback if needed
 
   // Focus start / end
-  $("#plan")?.addEventListener("click", onPlanClick); // fallback; main micro-start lives in popup_micro_start.js
   $("#btn-start")?.addEventListener("click", startFocusBlock);
   $("#btn-end")?.addEventListener("click", stopFocusBlock);
 
-  // Parsing / eligibility
+  // Scan + eligibility
   $("#btn-scan")?.addEventListener("click", onScanPage);
   $("#btn-check-elig")?.addEventListener("click", onCheckEligibility);
 
-  // Bookmarking / library
+  // Save & bookmarks
   $("#btn-save")?.addEventListener("click", onSavePage);
+  $("#btn-autofill")?.addEventListener("click", autofillFormFromProfile);
   $("#btn-show-saved")?.addEventListener("click", onShowSavedToggle);
+
+  // Library
   $("#btn-open-library")?.addEventListener("click", toggleLibraryCard);
   $("#btn-load-library")?.addEventListener("click", onLoadLibrary);
   $("#library-search")?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") onLoadLibrary();
   });
 
-  // Profile: open as LARGE POPUP WINDOW instead of new tab
+  // Profile: open as a large popup window (not a normal tab)
   $("#open-profile")?.addEventListener("click", () => {
     chrome.windows.create({
       url: PROFILE_PAGE_URL,
       type: "popup",
-      width: 900, // wide enough to fit your 840px layout
+      width: 900,
       height: 900,
     });
   });
 
-  // Autofill current page from profile
-  $("#btn-autofill")?.addEventListener("click", autofillFormFromProfile);
-
-  // Manual relax mini-game (kept)
+  // Mini relax game (unchanged)
   $("#btn-relax-game")?.addEventListener("click", () =>
     sendMessageToPage({ type: "MANUAL_START_GAME", game: "sniper" }),
   );
 
-  // Save small state of popup
+  // Persist small popup state
   $("#goal")?.addEventListener("input", savePopupState);
   $("#focus-minutes")?.addEventListener("input", savePopupState);
 });
@@ -822,6 +912,14 @@ document.addEventListener("DOMContentLoaded", () => {
 // When profile.html saves and broadcasts PROFILE_UPDATED, refresh icon state
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg && msg.type === "PROFILE_UPDATED") {
+    updateProfileIcon();
+  }
+});
+
+// Listen for profile updates from profile.html
+chrome.runtime.onMessage.addListener((msg) => {
+  if (!msg || typeof msg.type !== "string") return;
+  if (msg.type === "PROFILE_UPDATED") {
     updateProfileIcon();
   }
 });

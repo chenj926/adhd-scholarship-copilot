@@ -1,12 +1,18 @@
 :root {
-  --bg: #f5f5f5;
-  --card: #ffffff;
-  --ink: #202124;
-  --muted: #5f6368;
-  --accent: #1a73e8; /* Google blue vibe */
-  --border-subtle: #dadce0;
-  --error: #d93025;
-  --success: #188038;
+  color-scheme: dark;
+
+  --bg: #020617;
+  --bg-gradient: radial-gradient(circle at top left, #0f172a 0, #020617 40%, #020617 100%);
+  --surface: #020617;
+  --surface-elevated: rgba(15,23,42,0.98);
+  --border-subtle: rgba(148,163,184,0.4);
+  --border-strong: rgba(148,163,184,0.7);
+
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+  --accent: #22c55e;
+  --accent-soft: #16a34a;
+  --danger: #f97373;
 }
 
 *,
@@ -19,104 +25,160 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg-gradient);
+  color: var(--text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI", sans-serif;
 }
 
+/* ------------------------------------------------------------------ */
+/* Page layout                                                         */
+/* ------------------------------------------------------------------ */
+
 .page {
-  max-width: 840px;
+  max-width: 1100px;
   margin: 24px auto 40px;
-  padding: 0 16px 24px;
+  padding: 0 24px 32px;
 }
 
 .page-header {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .page-header h1 {
   margin: 0 0 4px;
-  font-size: 24px;
-  font-weight: 500;
+  font-size: 28px;
+  letter-spacing: 0.02em;
 }
 
 .page-subtitle {
   margin: 0;
+  font-size: 14px;
   color: var(--muted);
-  font-size: 13px;
+  max-width: 520px;
+  line-height: 1.5;
 }
 
-/* Card container */
+/* Main form uses responsive 2-column grid on desktop */
+#profile-form {
+  display: grid;
+  gap: 16px;
+}
+
+/* cards fill one column by default; on wide screens we show two columns */
+@media (min-width: 920px) {
+  #profile-form {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch; /* <--- 关键改这里 */
+  }
+
+  .actions {
+    grid-column: 1 / -1;
+  }
+}
+
+/* On very small screens show a comfortable single column */
+@media (max-width: 480px) {
+  .page {
+    padding: 8px 12px 20px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Cards / sections                                                    */
+/* ------------------------------------------------------------------ */
+
 .card {
-  background: var(--card);
-  border-radius: 12px;
-  padding: 16px 16px 18px;
-  margin-top: 14px;
+  background: linear-gradient(145deg, rgba(15,23,42,0.96), rgba(15,23,42,0.92));
+  border-radius: 16px;
   border: 1px solid var(--border-subtle);
-  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.1);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(15, 23, 42, 0.9);
+  padding: 18px 18px 16px;
 }
 
 .card h2 {
-  margin: 0 0 8px;
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--ink);
+  margin: 0 0 6px;
+  font-size: 18px;
 }
 
 .card h3 {
-  margin: 10px 0 8px;
+  margin: 8px 0 4px;
   font-size: 14px;
-  color: var(--muted);
-  font-weight: 500;
 }
 
-/* Fields */
+.hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Reference sub-blocks */
+.ref-block {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(148,163,184,0.4);
+}
+
+/* ------------------------------------------------------------------ */
+/* Fields & inputs                                                     */
+/* ------------------------------------------------------------------ */
+
 .field {
-  margin-top: 10px;
+  margin-bottom: 10px;
 }
 
 .field label {
   display: block;
-  font-size: 13px;
+  font-size: 12px;
   margin-bottom: 4px;
-  color: var(--ink);
+  color: var(--muted);
 }
 
 .required {
-  color: var(--error);
+  color: #f97373;
   margin-left: 2px;
 }
 
-/* Inputs + textarea */
-input,
-textarea {
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="date"],
+input[type="url"],
+textarea,
+select {
   width: 100%;
-  border-radius: 4px;
+  border-radius: 10px;
   border: 1px solid var(--border-subtle);
-  padding: 8px 10px;
+  background: rgba(15, 23, 42, 0.96);
+  color: var(--text);
   font-size: 13px;
-  background: #ffffff;
-  color: var(--ink);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  padding: 7px 9px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease,
+    background-color 0.15s ease;
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #9e9e9e;
+  color: var(--muted);
 }
 
 input:focus,
-textarea:focus {
-  outline: none;
+textarea:focus,
+select:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px rgba(26, 115, 232, 0.2);
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35);
 }
 
+/* Allow vertical resize but keep it tame */
 textarea {
+  min-height: 72px;
   resize: vertical;
 }
 
-/* Grid layout helpers */
+/* Grid helpers inside sections */
 .grid {
   display: grid;
   gap: 10px;
@@ -130,6 +192,7 @@ textarea {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+/* Collapse to single column on small widths */
 @media (max-width: 720px) {
   .grid-2,
   .grid-3 {
@@ -137,91 +200,107 @@ textarea {
   }
 }
 
-/* Hint / helper text */
-.hint {
-  margin: 4px 0 6px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-/* Checkbox row */
+/* Checkbox style */
 .checkbox {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: var(--ink);
+  color: var(--text);
 }
 
-.checkbox input {
-  width: auto;
+.checkbox input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
 }
 
-/* Reference blocks */
-.ref-block {
-  padding-top: 10px;
-  border-top: 1px solid #e0e0e0;
-  margin-top: 10px;
-}
+/* ------------------------------------------------------------------ */
+/* Actions row + buttons                                               */
+/* ------------------------------------------------------------------ */
 
-/* Actions */
 .actions {
+  margin-top: 4px;
+  padding-top: 8px;
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 18px;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid rgba(15,23,42,0.9);
 }
 
-button {
+.actions button {
+  font-family: inherit;
   border-radius: 999px;
-  border: none;
-  padding: 8px 18px;
   font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
   cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  border: none;
+  outline: none;
+  transition: background 0.15s ease, box-shadow 0.15s ease,
+    transform 0.05s ease, opacity 0.15s ease;
 }
 
-/* Primary button */
-button#saveBtn {
+/* Primary: Save profile */
+#saveBtn {
   background: var(--accent);
-  color: #ffffff;
-  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3);
+  color: #022c22;
+  box-shadow: 0 10px 25px rgba(34, 197, 94, 0.55);
 }
 
-button#saveBtn:hover {
-  background: #185abc;
+#saveBtn:hover {
+  background: var(--accent-soft);
+  box-shadow: 0 8px 18px rgba(34, 197, 94, 0.45);
 }
 
-/* Secondary button */
-button.secondary {
-  background: #ffffff;
-  border: 1px solid var(--border-subtle);
+#saveBtn:active {
+  transform: translateY(1px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.35);
+}
+
+/* Secondary: Clear data */
+button.secondary,
+.secondary {
+  background: transparent;
+  border: 1px solid var(--border-strong);
   color: var(--muted);
 }
 
-button.secondary:hover {
-  background: #f1f3f4;
+button.secondary:hover,
+.secondary:hover {
+  border-color: var(--accent);
+  color: var(--text);
+  background: rgba(15,23,42,0.9);
 }
 
-/* Disabled */
+button.secondary:active,
+.secondary:active {
+  transform: translateY(1px);
+}
+
+/* Disabled state */
 button:disabled {
   opacity: 0.6;
   cursor: default;
   box-shadow: none;
 }
 
-/* Status text */
+/* ------------------------------------------------------------------ */
+/* Status text                                                         */
+/* ------------------------------------------------------------------ */
+
 .status {
+  flex: 1;
+  min-height: 16px;
   font-size: 12px;
   color: var(--muted);
 }
 
 .status--success {
-  color: var(--success);
+  color: var(--accent);
 }
 
 .status--error {
-  color: var(--error);
+  color: var(--danger);
 }
