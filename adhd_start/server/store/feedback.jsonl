@@ -53,3 +53,4 @@
 {"user_id": "demo-user", "plan_id": null, "rating": 3, "reasons": [], "nudge_result": {}, "bad_sources": [], "comment": "", "timestamp": "2025-11-23T06:01:53.265790"}
 {"user_id": "demo-user", "plan_id": null, "rating": 0, "reasons": [], "nudge_result": {}, "bad_sources": [], "comment": "", "timestamp": "2025-11-23T06:23:00.615499"}
 {"user_id": "demo-user", "plan_id": null, "rating": 2, "reasons": ["steps_wrong"], "nudge_result": {}, "bad_sources": [], "comment": "", "timestamp": "2025-11-23T06:57:32.047570"}
+{"user_id": "demo-user", "plan_id": null, "rating": 3, "reasons": [], "nudge_result": {}, "bad_sources": [], "comment": "", "timestamp": "2025-11-23T07:38:55.787865"}

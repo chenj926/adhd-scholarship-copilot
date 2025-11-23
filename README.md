@@ -1,153 +1,186 @@
 # ADHD Scholarship Copilot
 
-ADHD Scholarship Copilot is a Chrome extension + FastAPI backend that helps ADHD students in Canada actually start and finish scholarship applications.
+**ADHD Scholarship Copilot** is a Chrome Extension and FastAPI backend designed to help neurodivergent students overcome the "Wall of Awful" associated with scholarship and job applications.
 
-It combines:
-- Focus support (spotlight, timers, micro-starts, break games)
-- Scholarship parsing (deadlines, values, requirements, AI policy)
-- Profile-based eligibility checks
-- Smart autofill for common form fields (name, email, address, degree, graduation date)
+It uses AI to break tasks down into micro-steps, utilizes RAG (Retrieval-Augmented Generation) to parse complex requirements, and includes gamified focus tools to keep users on track.
 
----
+## ✨ Key Features
 
-## Getting Started
+### 🧠 AI & RAG Powered
 
-### Prerequisites
-- Python 3.10+
-- Google Chrome
-- FastAPI backend running locally
-- API keys:
-  - FRACTAL_API_KEY
-  - ANTHROPIC_API_KEY (Claude 3.5)
+  - **Micro-Starts:** Uses **Claude 4.5 Sonnet** to break a daunting webpage into a 4-step actionable plan (Read -\> Check -\> Focus -\> Feedback).
+  - **RAG Extraction:** Vector search (ChromaDB) retrieves relevant context to accurately parse deadlines, reference requirements, and AI policies from scholarship pages.
+  - **Firecrawl Integration:** Scrapes and cleans scholarship pages for the backend library.
 
----
+### 🛡️ Focus Tools
 
-## Project Structure
+  - **Focus Shield:** A visual spotlight (Circle/Rectangle) that dims the rest of the screen to reduce visual clutter.
+  - **Focus Games:**
+      - *Keyword Sniper:* Gamified reading where you click keywords to gain XP.
+      - *Visual Search:* A quick pattern-matching game to reset dopamine during breaks.
+      - *Focus Chain:* Tracks consecutive actions without tab-switching.
+  - **Session Timer:** Configurable focus blocks with periodic "check-ins" (e.g., T+5, T+12 minutes).
 
-```text
-adhdh-start/
-├── backend/
-│   ├── app/
-│   │   ├── main.py
-│   │   └── routers/
-│   │       ├── plan.py
-│   │       ├── parse.py
-│   │       ├── bookmark.py
-│   │       ├── eligibility.py
-│   │       └── scholarships.py
-│   ├── .env
-│   └── requirements.txt
-│
-├── extension/
-│   ├── manifest.json
-│   ├── popup.html
-│   ├── popup.js
-│   ├── popup.ts
-│   ├── profile.html
-│   ├── profile.js
-│   ├── focus_games.js
-│   └── icons/
-│
-└── README.md
+### 👤 Profile & Autofill
+
+  - **Local Profile:** Securely stores personal info, education details, and reference contacts in Chrome Storage.
+  - **Smart Autofill:** Automatically fills common application fields (names, addresses, citizenship radios) based on the user profile.
+  - **Eligibility Check:** Compares the scholarship text against the user profile to warn about mismatching degrees or citizenship requirements.
+
+-----
+
+## 🛠️ Tech Stack
+
+  - **Backend:** Python 3.10+, FastAPI, Uvicorn
+  - **AI/LLM:** Anthropic (Claude 4.5 Sonnet), LangChain, HuggingFace Embeddings
+  - **Database:** ChromaDB (Vector Store), JSONL (Feedback/Logs)
+  - **Scraping:** Firecrawl
+  - **Frontend:** Chrome Extension (HTML/CSS/JS/TypeScript)
+
+-----
+
+## 🚀 Getting Started
+
+### 1\. Prerequisites
+
+  - Python 3.10 or higher
+  - Google Chrome (for the extension)
+  - An [Anthropic API Key](https://console.anthropic.com/)
+  - A [Firecrawl API Key](https://firecrawl.dev/)
+
+### 2\. Backend Setup
+
+1.  Navigate to the project root:
+
+    ```bash
+    cd adhd_start
+    ```
+
+2.  Create a virtual environment (optional but recommended):
+
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # On Windows: venv\Scripts\activate
+    ```
+
+3.  Install dependencies:
+
+    ```bash
+    pip install -r server/requirements.txt
+    ```
+
+4.  **Configure Environment Variables:**
+    Create a `.env` file in the `adhd_start` directory (or `adhd_start/server/`). Add the following keys:
+
+    ```ini
+    # .env
+    ANTHROPIC_API_KEY=sk-ant-api03-...
+    # The specific model version used in this build
+    ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
+
+    FIRECRAWL_API_KEY=fc-YOUR_KEY_HERE
+    ```
+
+### 3\. Data Ingestion (Optional)
+
+To make the RAG (Retrieval-Augmented Generation) and Scholarship Library work effectively, you need to ingest data.
+
+  * **Ingest Sample Pages (RAG Context):**
+    ```bash
+    # Runs adhd_start/extension/rag/ingest_global.py
+    python -m extension.rag.ingest_global
+    ```
+  * **Scrape & Update Library (Firecrawl):**
+    ```bash
+    # Runs adhd_start/server/tools/firecrawl_ingest.py
+    # Scrapes URLs from server/store/public_scholarship_urls.txt
+    python -m server.tools.firecrawl_ingest
+    ```
+
+### 4\. Run the Server
+
+Start the FastAPI backend. Keep this terminal open.
+
+```bash
+# Must be run from the 'adhd_start' directory
+python -m uvicorn server.app:app --reload --port 8000
 ```
 
-Backend → FastAPI endpoints (`/plan`, `/parse`, `/bookmark`, `/bookmarks`, `/eligibility`, `/scholarships`)  
-Extension → Chrome extension UI (popup, spotlight, autofill, summary tools)
+Verify it is running by visiting: [http://127.0.0.1:8000/docs](https://www.google.com/search?q=http://127.0.0.1:8000/docs)
 
----
+-----
 
-## Environment Variables
+### 5\. Load the Chrome Extension
 
-Inside `adhdh-start` create a file named `.env`:
+1.  Open Chrome and navigate to `chrome://extensions`.
+2.  Enable **Developer mode** (top right toggle).
+3.  Click **Load unpacked**.
+4.  Select the `adhd_start/extension` folder.
+5.  Pin the "Rocket" icon to your toolbar.
 
-FRACTAL_API_KEY=your_fractal_api_key_here  
-ANTHROPIC_API_KEY=your_claude_api_key_here  
+-----
 
-Never commit your `.env`.
+## 📖 Usage Guide
 
----
+1.  **Micro-Start:**
 
-## Install Dependencies
+      * Navigate to any scholarship or job posting.
+      * Open the extension popup.
+      * Click **"✨ AI Micro-Start"**.
+      * Claude will read the page and generate a 4-step overlay to get you moving.
 
-Inside the backend folder:
+2.  **Focus Mode:**
 
-pip install -r requirements.txt
+      * In the popup, set minutes (e.g., 20) and check-ins (e.g., 5, 12).
+      * Click **"🚀 START FOCUS MODE"**.
+      * Use the "Spotlight" controls to dim distractions.
 
----
+3.  **Library & Search:**
 
-## Run the Backend
+      * In the popup, click **"📚 Library"**.
+      * Click **"Load Scholarships"** to fetch data scraped by Firecrawl.
 
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+4.  **Profile & Autofill:**
 
-Backend endpoints:
-- http://127.0.0.1:8000/plan  
-- http://127.0.0.1:8000/parse  
-- http://127.0.0.1:8000/bookmark  
-- http://127.0.0.1:8000/bookmarks?user_id=demo-user  
-- http://127.0.0.1:8000/eligibility  
-- http://127.0.0.1:8000/scholarships
+      * Click **"👤 Profile"** to open the side-panel/window.
+      * Fill in your details and save.
+      * On an application page, click **"✍️ Autofill"** in the popup to auto-complete fields.
 
----
+-----
 
-## Load the Chrome Extension
+## 📂 Project Structure
 
-1. Open Chrome → chrome://extensions  
-2. Enable **Developer mode**  
-3. Click **Load Unpacked**  
-4. Select the `extension/` folder  
+```text
+adhd_start/
+├── .env                        # API Keys (Anthropic, Firecrawl)
+├── dev_smoke.sh                # Smoke test script for backend
+│
+├── server/                     # FASTAPI BACKEND
+│   ├── app.py                  # Main entry point & Routes
+│   ├── llm.py                  # Anthropic & RAG Logic
+│   ├── firecrawl_client.py     # Firecrawl API wrapper
+│   ├── schemas.py              # Pydantic models
+│   ├── tools/
+│   │   └── firecrawl_ingest.py # Script to scrape URLs -> JSON
+│   └── store/                  # Local DBs
+│       ├── chroma_global/      # Vector store for RAG
+│       ├── scholarships.json   # Scraped library data
+│       └── user_data/          # User profiles (JSON)
+│
+└── extension/                  # CHROME EXTENSION
+    ├── manifest.json           # MV3 Manifest
+    ├── popup.html / .js        # Main extension UI
+    ├── profile.html / .js      # User profile form
+    ├── micro_start_overlay.js  # The 4-step AI plan overlay
+    ├── focus_games.js          # Spotlight & Visual Search games
+    ├── dist/                   # Compiled TS helpers
+    └── rag/                    # RAG ingestion scripts (shared logic)
+        ├── ingest_global.py
+        └── retriever.py
+```
 
-You will now see the extension icon in your toolbar.
+## ⚠️ Notes
 
----
-
-## Devpost & Demo Links
-
-- Devpost: *https://devpost.com/software/adhd-scholarship-copilot#updates*  
-- Demo Video: *Add your demo video link here*
-
----
-
-## Tech Stack
-
-- Backend: FastAPI (Python)  
-- Extension: Chrome extension (HTML/CSS/JS/TS)  
-- LLM: Claude 3.5 Sonnet (via Fractal/Anthropic)  
-- Storage: Chrome storage.sync  
-- Autofill: Chrome scripting API  
-- Focus tools: spotlight overlay + game  
-
----
-
-## Key Features
-
-### Focus & Shield
-- Spotlight overlay (circle / rectangular)  
-- Timed focus blocks with check-ins  
-- AI-powered “micro-starts”  
-- Small relaxation game for mental resets  
-
-### Scholarship Tools
-- Parse deadlines, values, references from scholarship text  
-- Detect AI policy restrictions (e.g., coach-only)  
-- Eligibility check driven by scholarship text + user profile  
-- Clear “Matched from your profile” vs “Unclear / Missing info”  
-
-### Profile + Autofill
-- Save personal data (name, address, citizenship)  
-- Save school/program/degree type  
-- Save graduation month/year  
-- Autofill forms automatically on scholarship websites  
-
-### Scholarship Library
-- Save scholarship pages to backend  
-- View saved items in popup  
-- Load scraped scholarship pages via /scholarships  
-
----
-
-## Notes
-
-- This project is designed for ADHD users.  
-- The goal is to reduce friction, anxiety, and overwhelm when applying for scholarships.  
-- Helps students start tasks, stay engaged, and understand requirements clearly.  
-- Uses explainable and safe prompting, aligned with the Hackathon rules.
+  * **API Costs:** This project uses the Anthropic API and Firecrawl API. Usage will incur costs on your respective accounts.
+  * **Privacy:** Profile data is stored locally in your browser (`chrome.storage`). Backend logging (feedback) is stored in local JSONL files.
+  * **Smoke Test:** You can run `./dev_smoke.sh` to quickly test if the backend endpoints (`/parse`, `/plan`) are responding correctly.
