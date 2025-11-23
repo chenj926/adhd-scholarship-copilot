@@ -34,6 +34,7 @@ def upsert_user_text(user_id: str, text: str, tag: str = "note") -> int:
 
     vs = Chroma(persist_directory=str(db_dir), embedding_function=EMB)
     vs.add_texts(chunks, metadatas=metas)
-    vs.persist()
-
+    
+    # FIX: Removed vs.persist() as it is deprecated/removed in newer Chroma versions (auto-persists)
+    
     return len(chunks)
