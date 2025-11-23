@@ -1,8 +1,8 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import PopupApp from "./PopupApp";
-// Import global tailwind styles here so they are bundled
-import "../../styles/tailwind.css"; 
+// FIX: Use single dot dot (..) to go up to 'src/'
+import "../styles/tailwind.css"; 
 
 const container = document.getElementById("root");
 const root = createRoot(container);

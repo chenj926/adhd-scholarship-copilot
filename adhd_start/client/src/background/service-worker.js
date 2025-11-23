@@ -30,8 +30,30 @@ function broadcastEndBlock(reason) {
   });
 }
 
-chrome.runtime.onMessage.addListener((msg) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || typeof msg.type !== "string") return;
+
+  // 1. PROXY FETCH HANDLER
+  if (msg.type === "PROXY_FETCH") {
+    fetch(msg.url, {
+      method: msg.method || "GET",
+      headers: msg.headers || { "Content-Type": "application/json" },
+      body: msg.body ? JSON.stringify(msg.body) : null
+    })
+    .then(async (res) => {
+      const text = await res.text();
+      try {
+        const json = JSON.parse(text);
+        sendResponse({ ok: res.ok, status: res.status, data: json });
+      } catch {
+        sendResponse({ ok: res.ok, status: res.status, data: text });
+      }
+    })
+    .catch((err) => {
+      sendResponse({ ok: false, error: err.toString() });
+    });
+    return true; // Keep channel open for async response
+  }
 
   // Focus START
   if (msg.type === "START_BLOCK") {

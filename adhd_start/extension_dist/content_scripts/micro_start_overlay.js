@@ -151,26 +151,25 @@
   async function submitFeedback() {
     const btn = shadowRoot.getElementById("btn-submit-fb");
     if (btn) {
-      btn.textContent = "Sending.";
+      btn.textContent = "Sending...";
       btn.disabled = true;
     }
 
-    try {
-      await fetch(FEEDBACK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: DEFAULT_USER_ID,
-          rating: state.feedbackRating || 0,
-          comment: state.feedbackText,
-          reasons: Array.from(state.selectedChips),
-        }),
-      });
-    } catch (e) {
-      console.error("[Overlay] Feedback failed:", e);
-    }
-
-    closeOverlay();
+    // Use Chrome Message Proxy to avoid Mixed Content Error
+    chrome.runtime.sendMessage({
+      type: "PROXY_FETCH",
+      url: "http://localhost:8000/feedback",
+      method: "POST",
+      body: {
+        user_id: DEFAULT_USER_ID,
+        rating: state.feedbackRating || 0,
+        comment: state.feedbackText,
+        reasons: Array.from(state.selectedChips),
+      }
+    }, (response) => {
+      console.log("[Overlay] Feedback response:", response);
+      closeOverlay();
+    });
   }
 
   function esc(str) {
