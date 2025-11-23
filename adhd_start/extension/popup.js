@@ -9,6 +9,7 @@ const PARSE_URL = `${API_BASE}/parse`;
 const BOOKMARK_URL = `${API_BASE}/bookmark`;
 const BOOKMARKS_URL = `${API_BASE}/bookmarks?user_id=demo-user`;
 const BOOKMARK_STATUS_URL = `${API_BASE}/bookmark/status`;
+const LOCAL_BOOKMARKS_KEY = "localBookmarks"; // local fallback for saved pages
 const ELIGIBILITY_URL = `${API_BASE}/eligibility`;
 const SCHOLARSHIPS_URL = `${API_BASE}/scholarships`;
 const PROFILE_PAGE_URL = chrome.runtime.getURL("profile.html");
@@ -715,64 +716,167 @@ async function markBookmarkDropped(id) {
   });
 }
 
+// ---------------- Local bookmarks fallback ----------------
+
+function addLocalBookmark(bm) {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(LOCAL_BOOKMARKS_KEY, (res) => {
+      const arr = Array.isArray(res[LOCAL_BOOKMARKS_KEY])
+        ? res[LOCAL_BOOKMARKS_KEY]
+        : [];
+
+      // de-duplicate by URL: if same URL exists, overwrite
+      const idx = arr.findIndex((x) => x.url === bm.url);
+      if (idx >= 0) {
+        arr[idx] = { ...arr[idx], ...bm };
+      } else {
+        arr.push(bm);
+      }
+
+      chrome.storage.local.set({ [LOCAL_BOOKMARKS_KEY]: arr }, () => resolve());
+    });
+  });
+}
+
+function getLocalBookmarks() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(LOCAL_BOOKMARKS_KEY, (res) => {
+      const arr = Array.isArray(res[LOCAL_BOOKMARKS_KEY])
+        ? res[LOCAL_BOOKMARKS_KEY]
+        : [];
+      resolve(arr);
+    });
+  });
+}
+
+function removeLocalBookmark(id) {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(LOCAL_BOOKMARKS_KEY, (res) => {
+      let arr = Array.isArray(res[LOCAL_BOOKMARKS_KEY])
+        ? res[LOCAL_BOOKMARKS_KEY]
+        : [];
+      arr = arr.filter((bm) => bm.id !== id);
+      chrome.storage.local.set({ [LOCAL_BOOKMARKS_KEY]: arr }, () => resolve());
+    });
+  });
+}
+
 async function onShowSavedToggle() {
   const listEl = $("#saved-list");
   if (!listEl) return;
 
+  // toggle hide / show
   if (!listEl.classList.contains("hidden")) {
     hide(listEl);
     return;
   }
 
   show(listEl);
-  listEl.innerHTML = "Loading.";
+  listEl.innerHTML = "Loading...";
 
   try {
-    const resp = await fetch(BOOKMARKS_URL);
-    let items = await resp.json();
-    items = items.filter((bm) => bm.status !== "dropped");
+    // 1) 尝试从后端拿
+    let serverItems = [];
+    try {
+      const resp = await fetch(BOOKMARKS_URL);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (Array.isArray(data)) {
+          serverItems = data.filter((bm) => bm.status !== "dropped");
+        } else {
+          console.warn("[popup] BOOKMARKS_URL returned non-array", data);
+        }
+      } else {
+        console.warn("[popup] BOOKMARKS_URL error:", resp.status);
+      }
+    } catch (e) {
+      console.warn("[popup] Failed to load server bookmarks, will use local only.", e);
+    }
+
+    // 2) 本地 fallback
+    const localItems = await getLocalBookmarks();
+
+    // 3) 按 URL merge（后端优先覆盖本地），并打上 source 标记
+    const byUrl = new Map();
+
+    (localItems || []).forEach((bm) => {
+      if (!bm || !bm.url) return;
+      byUrl.set(bm.url, {
+        ...bm,
+        _source: "local",
+      });
+    });
+
+    (serverItems || []).forEach((bm) => {
+      if (!bm || !bm.url) return;
+      byUrl.set(bm.url, {
+        ...bm,
+        _source: "server",
+      });
+    });
+
+    const items = Array.from(byUrl.values());
 
     if (!items.length) {
       listEl.textContent = "No saved pages.";
       return;
     }
 
+    // 4) 渲染列表
     listEl.innerHTML = items
       .map(
         (bm) => `
-        <div class="saved-item" data-id="${
-          bm.id
-        }" style="position:relative; padding:8px 26px 8px 6px; border-bottom:1px solid rgba(255,255,255,0.1);">
-           <a href="${
-             bm.url
-           }" target="_blank" style="color:#bfdbfe; text-decoration:none; font-weight:600; font-size:12px; display:block; margin-bottom:2px;">${escapeHtml(
-          bm.title || "Untitled",
-        )}</a>
-           <div class="muted" style="font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(
-             bm.url,
-           )}</div>
-           <button class="saved-delete" title="Delete" style="position:absolute; right:4px; top:8px; background:none; border:none; color:#f87171; cursor:pointer; font-size:14px; padding:0 4px;">✕</button>
-        </div>
-      `,
+          <div class="saved-item"
+               style="position: relative; margin-bottom: 8px; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 4px;"
+               data-id="${bm.id || bm.localId || ""}"
+               data-source="${bm._source || "server"}">
+             
+             <a href="${bm.url}" target="_blank"
+                style="color:#bfdbfe; text-decoration:none; font-weight:600; font-size:12px; display:block; margin-bottom:2px; padding-right: 20px;">
+                ${escapeHtml(bm.title || "Untitled")}
+             </a>
+             
+             <div class="muted" style="font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right: 20px;">
+               ${escapeHtml(bm.url)}
+             </div>
+
+             <button class="saved-delete" title="Delete"
+                     style="position:absolute; right:4px; top:8px; background:none; border:none;
+                            color:#f87171; cursor:pointer; font-size:14px; padding:0 4px; line-height: 1;">✕</button>
+          </div>
+        `,
       )
       .join("");
 
+    // 5) 删除逻辑：server 调接口，本地改 storage
     listEl.querySelectorAll(".saved-delete").forEach((btn) => {
-      btn.addEventListener("click", async () => {
+      btn.addEventListener("click", async (event) => {
+        // Prevent click from also triggering the row / link below
+        event.stopPropagation();
+        event.preventDefault();
+
         const item = btn.closest(".saved-item");
         const id = item.getAttribute("data-id");
+        const source = item.getAttribute("data-source") || "server";
+
         item.remove();
         if (!listEl.querySelector(".saved-item")) {
           listEl.textContent = "No saved pages.";
         }
+
         try {
-          await markBookmarkDropped(id);
+          if (source === "server" && id) {
+            await markBookmarkDropped(id);
+          } else if (source === "local" && id) {
+            await removeLocalBookmark(id);
+          }
         } catch (err) {
-          console.error(err);
+          console.error("[popup] Failed to delete bookmark:", err);
         }
       });
     });
   } catch (e) {
+    console.error("[popup] onShowSavedToggle error:", e);
     listEl.innerHTML = "Could not load bookmarks.";
   }
 }
@@ -786,77 +890,72 @@ async function onSavePage() {
   }
 
   try {
-    // More robust tab lookup – active tab in last focused window
-    const tabs = await chrome.tabs.query({
-      active: true,
-      lastFocusedWindow: true,
-    });
-    const tab = tabs[0];
-
+    const tab = await getActiveTab();
     if (!tab || !tab.url) {
       throw new Error("No active page to save.");
     }
 
-    const payload = {
-      user_id: "demo-user",
-      url: tab.url,
-      title: tab.title || tab.url,
+    const url = tab.url;
+    const title = tab.title || tab.url;
+
+    // 1) always save one copy at local（ensure we can see it in save panel）
+    const localBookmark = {
+      id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      url,
+      title,
+      createdAt: new Date().toISOString(),
     };
+    await addLocalBookmark(localBookmark);
 
-    // Primary attempt: POST /bookmark
-    let resp = await fetch(BOOKMARK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    // Fallback: some backends use /bookmarks for POST as well
-    if (!resp.ok) {
-      console.warn(
-        "[popup] /bookmark returned",
-        resp.status,
-        "trying /bookmarks fallback...",
-      );
-      const altResp = await fetch(`${API_BASE}/bookmarks`, {
+    // 2) send to BE /bookmark
+    let serverOk = false;
+    try {
+      const resp = await fetch(BOOKMARK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          user_id: "demo-user",
+          url,
+          title,
+        }),
       });
 
-      if (!altResp.ok) {
-        const text = await altResp.text().catch(() => "");
-        throw new Error(
-          `Server error: ${altResp.status} ${text ? "– " + text : ""}`,
-        );
+      if (!resp.ok) {
+        throw new Error(`Server returned ${resp.status}`);
       }
-      resp = altResp;
+      serverOk = true;
+    } catch (err) {
+      console.warn("[popup] Server bookmark save failed, using local only.", err);
     }
 
     if (status) {
-      status.textContent = "Saved!";
-      status.style.color = "#10b981"; // Green
+      if (serverOk) {
+        status.textContent = "Saved!";
+      } else {
+        status.textContent = "Saved locally (server offline).";
+      }
+      status.style.color = "#10b981";
       setTimeout(() => {
         status.textContent = "";
         status.style.color = "";
       }, 2000);
     }
 
-    // If "Saved" panel is open, refresh it
+    // if Saved panel is open，auto refresh
     const listEl = $("#saved-list");
     if (listEl && !listEl.classList.contains("hidden")) {
       onShowSavedToggle(); // hide
-      setTimeout(onShowSavedToggle, 50); // show + reload
+      setTimeout(onShowSavedToggle, 80); // show + reload
     }
   } catch (e) {
     console.error("[popup] Save failed:", e);
     if (status) {
-      status.textContent = `Save failed${
-        e && e.message ? ": " + e.message : "."
-      }`;
-      status.style.color = "#f87171"; // Red
+      status.textContent = "Save failed.";
+      status.style.color = "#f87171";
     }
   }
 }
+
 
 // =============================================================================
 // INIT
