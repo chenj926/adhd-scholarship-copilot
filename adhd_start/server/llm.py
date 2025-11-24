@@ -260,7 +260,7 @@ def extract_fields_rag_or_llm(
     context = ""
     sources: List[Dict[str, Any]] = []
     try:
-        from extension.rag.retriever import get_context_for_parse  # type: ignore
+        from server.rag.retriever import get_context_for_parse  # type: ignore
 
         context, sources = get_context_for_parse(page_text=page_text, user_id=user_id)
         print("[llm] RAG context length for /parse:", len(context))

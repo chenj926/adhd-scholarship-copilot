@@ -43,7 +43,7 @@ load_dotenv(ROOT_DIR / ".env")
 
 # Optional user‑RAG ingest
 try:
-    from extension.rag.ingest_user import (  # type: ignore
+    from server.rag.ingest_user import (  # type: ignore
         upsert_user_text as _rag_upsert_user_text,
     )
 except Exception as exc:  # pragma: no cover

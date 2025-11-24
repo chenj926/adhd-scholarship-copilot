@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "ADHD Scholarship Copilot",
+  "version": "0.5.0",
+  "permissions": [
+    "storage", "alarms", "notifications", "scripting", "activeTab"
+  ],
+  "host_permissions": [
+    "http://localhost:8000/*" 
+  ],
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_title": "ADHD Scholarship Copilot"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content_scripts/focus_games.js", "content_scripts/micro_start_overlay.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
