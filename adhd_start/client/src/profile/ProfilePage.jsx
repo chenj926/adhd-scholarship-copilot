@@ -3,6 +3,12 @@
 
 import React, { useEffect, useState } from "react";
 
+const primaryButtonClasses =
+  "inline-flex items-center justify-center rounded-lg bg-indigo-500 px-4 py-2 text-[13px] font-semibold text-slate-950 shadow-sm hover:bg-indigo-400 hover:shadow-glow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 transition";
+
+const secondaryButtonClasses =
+  "inline-flex items-center justify-center rounded-lg border border-slate-700/80 bg-slate-900/80 px-4 py-2 text-[13px] text-slate-100 shadow-sm hover:bg-slate-800/90 hover:shadow-glow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 transition";
+
 const emptyRef = { firstName: "", lastName: "", title: "", letter: "" };
 
 const emptyProfile = {
@@ -132,7 +138,7 @@ export default function ProfilePage() {
       : "text-slate-400";
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-50 flex justify-center px-4 py-6">
+    <main className="min-h-screen bg-slate-950 text-slate-50 flex justify-center px-4 py-6 font-sans">
       <div className="w-full max-w-3xl space-y-4">
         <header className="space-y-1">
           <h1 className="text-xl font-semibold">Profile</h1>
@@ -140,11 +146,15 @@ export default function ProfilePage() {
             This information stays on your device and is used to auto-fill
             applications.
           </p>
+          <p className="text-xs text-slate-500">
+            You don&apos;t need to fill everything today – start with the basics
+            (name, email, school) and add more details whenever you have energy.
+          </p>
         </header>
 
         <form onSubmit={handleSave} className="space-y-4">
           {/* Basic Information */}
-          <section className="rounded-xl border border-slate-800 bg-slate-900/80 p-4 space-y-3">
+          <section className="rounded-2xl border border-slate-800/80 bg-slate-900/80 p-4 space-y-3 shadow-sm">
             <h2 className="text-sm font-semibold">Basic Information</h2>
             <div className="grid gap-3 md:grid-cols-3">
               <Field
@@ -352,14 +362,14 @@ export default function ProfilePage() {
           <section className="flex flex-wrap items-center gap-3 pt-2">
             <button
               type="submit"
-              className="inline-flex items-center justify-center rounded-md bg-blue-500 px-4 py-2 text-[13px] font-semibold text-slate-950 hover:bg-blue-400 transition"
+              className={primaryButtonClasses}
             >
               Save profile
             </button>
             <button
               type="button"
               onClick={handleClear}
-              className="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900 px-4 py-2 text-[13px] text-slate-200 hover:bg-slate-800 transition"
+              className={secondaryButtonClasses}
             >
               Clear saved data
             </button>
@@ -384,7 +394,7 @@ function Field({ label, required, type = "text", value, onChange }) {
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-[12px] text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="w-full rounded-lg border border-slate-700/80 bg-slate-950 px-2.5 py-1.5 text-[12px] text-slate-100 placeholder:text-slate-500 shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-400/80 focus:border-indigo-400/80 transition"
       />
     </div>
   );
@@ -399,7 +409,7 @@ function TextareaField({ label, rows = 3, value, onChange, placeholder }) {
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-[12px] text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="w-full rounded-lg border border-slate-700/80 bg-slate-950 px-2.5 py-1.5 text-[12px] text-slate-100 placeholder:text-slate-500 shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-400/80 focus:border-indigo-400/80 transition"
       />
     </div>
   );
@@ -426,7 +436,7 @@ function SelectField({ label, value, onChange, options }) {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-[12px] text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="w-full rounded-lg border border-slate-700/80 bg-slate-950 px-2.5 py-1.5 text-[12px] text-slate-100 shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-400/80 focus:border-indigo-400/80 transition"
       >
         {options.map((opt) => (
           <option key={opt.value || "_blank"} value={opt.value}>

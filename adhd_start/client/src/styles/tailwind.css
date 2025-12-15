@@ -1,3 +1,41 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-dark-900/80 backdrop-blur-md border border-white/10 shadow-glass;
+  }
+  
+  .btn-glow {
+    @apply transition-all duration-300 hover:shadow-glow-sm hover:border-primary/50 relative overflow-hidden;
+  }
+  
+  .btn-glow:after {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full transition-transform duration-500;
+  }
+  
+  .btn-glow:hover:after {
+    @apply translate-x-full;
+  }
+}
+
+/* Modern Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent; 
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155; 
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569; 
+}

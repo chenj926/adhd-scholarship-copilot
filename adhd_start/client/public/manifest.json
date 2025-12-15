@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ADHD Scholarship Copilot",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "permissions": [
     "storage", "alarms", "notifications", "scripting", "activeTab"
   ],
@@ -19,7 +19,14 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content_scripts/focus_games.js", "content_scripts/micro_start_overlay.js"],
+      "css": ["assets/style.css"], 
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*", "profile.html"],
+      "matches": ["<all_urls>"]
     }
   ]
 }

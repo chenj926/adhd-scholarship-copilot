@@ -18,16 +18,25 @@ const SCHOLARSHIPS_URL = `${API_BASE}/scholarships`;
 const DEFAULT_USER_ID = "demo-user";
 const PROFILE_PAGE_URL = chrome.runtime.getURL("profile.html");
 
+// Button + card styles – 所有按钮 hover 都有柔和光晕
+const BTN_BASE =
+  "inline-flex items-center justify-center rounded-lg border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[12px] font-medium text-slate-100 shadow-sm transition-colors transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 hover:shadow-glow-soft";
+
 const BTN_SMALL =
-  "inline-flex items-center rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-[11px] text-slate-200 hover:bg-slate-700 transition";
+  BTN_BASE + " h-7 px-2.5 text-[11px] font-normal";
+
 const BTN_PRIMARY =
-  "inline-flex items-center justify-center rounded-md bg-blue-500 px-3 py-2 text-[12px] font-semibold text-slate-950 hover:bg-blue-400 transition disabled:opacity-60 disabled:cursor-not-allowed";
+  BTN_BASE +
+  " bg-indigo-500 text-slate-950 border-transparent hover:bg-indigo-400 disabled:opacity-60 disabled:cursor-not-allowed";
+
 const BTN_SECONDARY =
-  "inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-[12px] text-slate-200 hover:bg-slate-800 transition";
+  BTN_BASE + " hover:bg-slate-800/90";
+
 const BTN_DANGER =
-  "inline-flex items-center justify-center rounded-md border border-red-500/60 bg-slate-900 px-3 py-2 text-[12px] text-red-300 hover:bg-red-500/10 transition";
+  BTN_BASE + " border-red-500/70 text-red-300 hover:bg-red-500/10";
+
 const CARD =
-  "rounded-xl border border-slate-800 bg-slate-900/70 p-3 space-y-3";
+  "rounded-2xl border border-slate-800/80 bg-slate-900/80 p-3 space-y-3 shadow-sm";
 
 function escapeHtml(s) {
   return (s || "")
@@ -369,6 +378,21 @@ export default function PopupApp() {
 
   // Relax game dropdown
   const [relaxGame, setRelaxGame] = useState("sniper");
+
+  const handleOpenAsWindow = () => {
+    chrome.windows.create(
+      {
+        url: chrome.runtime.getURL("src/popup/index.html"),
+        type: "popup",
+        width: 420,
+        height: 640,
+      },
+      () => {
+        // 关掉小的 action popup，让用户只看到可以拖动大小的窗口
+        window.close();
+      }
+    );
+  };
 
   // -------------------------------------------------------------------------
   // Restore + persist popup state (goal, minutes, check-ins)
@@ -876,12 +900,12 @@ export default function PopupApp() {
   // Render
   // -------------------------------------------------------------------------
   return (
-    <div className="w-[380px] bg-slate-950 text-slate-100 text-[12px] p-3 space-y-2">
+    <div className="w-[380px] max-w-[100vw] bg-slate-950 text-slate-100 text-[12px] p-3 space-y-2 font-sans">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="font-semibold text-sm flex items-center gap-1">
-          <span>⚡</span>
-          <span>Copilot</span>
+          <span className="text-indigo-400">⚡</span>
+          <span>ADHD Copilot</span>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -899,6 +923,14 @@ export default function PopupApp() {
             📚 Library
           </button>
           <button
+            type="button"
+            title="Open in a resizable window"
+            onClick={handleOpenAsWindow}
+            className={BTN_SMALL}
+          >
+            ⧉ Pop out
+          </button>
+          <button
             id="open-profile"
             title={
               profileComplete
@@ -906,10 +938,8 @@ export default function PopupApp() {
                 : "Click to set up your profile for autofill and smarter eligibility."
             }
             onClick={() => {
-              // Note: In React build, profile.html is likely at the root of dist or assets
-              // Use chrome.runtime.getURL to be safe
               chrome.windows.create({
-                url: chrome.runtime.getURL("src/profile/index.html"), // Dev path, Vite handles build path mapping
+                url: chrome.runtime.getURL("src/profile/index.html"),
                 type: "popup",
                 width: 900,
                 height: 900,
@@ -919,7 +949,6 @@ export default function PopupApp() {
           >
             <span className="mr-1">👤</span>
             <span>Profile</span>
-            {/* Restored Initials Logic */}
             {profileInitials && (
               <span className="ml-1 text-[9px] font-bold bg-slate-700 px-1 rounded-full">
                 {profileInitials}
@@ -997,12 +1026,17 @@ export default function PopupApp() {
 
         <textarea
           rows={2}
-          placeholder="Goal: e.g. 'Fill out personal info'"
+          placeholder="Optional goal – e.g. “Fill out personal info”"
           value={goal}
           onChange={(e) => setGoal(e.target.value)}
           id="goal"
-          className="w-full rounded-md border border-slate-800 bg-slate-950 px-2 py-2 text-[12px] text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full rounded-md border border-slate-800 bg-slate-950 px-2 py-2 text-[12px] text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-400/80"
         />
+
+        <p className="mt-1 text-[10px] text-slate-400 leading-snug">
+          Goal is optional – keep it short or leave it blank if typing feels heavy.  
+          If you leave it empty, the AI will infer a goal from the page.
+        </p>
 
         <div className="flex mt-1">
           <button
@@ -1024,7 +1058,7 @@ export default function PopupApp() {
         <div className="mt-2 flex gap-2 rounded-md bg-slate-950 px-2 py-2">
           <div className="flex flex-1 flex-col gap-1">
             <span className="text-[9px] font-medium text-slate-500">
-              BLOCK (MIN)
+              FOCUS BLOCK (MIN)
             </span>
             <input
               id="focus-minutes"
@@ -1038,7 +1072,7 @@ export default function PopupApp() {
           </div>
           <div className="flex flex-1 flex-col gap-1">
             <span className="text-[9px] font-medium text-slate-500">
-              CHECK-IN (MIN)
+              CHECK-IN (MIN, optional)
             </span>
             <input
               id="focus-checkins"
@@ -1046,9 +1080,17 @@ export default function PopupApp() {
               value={checkinsInput}
               onChange={(e) => setCheckinsInput(e.target.value)}
               className="w-full border-b border-slate-700 bg-transparent text-center text-[12px] text-slate-100 outline-none"
+              placeholder='e.g. "10" or "5, 12, 18"'
             />
           </div>
         </div>
+
+        <p className="mt-1 text-[10px] text-slate-400 leading-snug">
+          Focus time = length of the whole block. Check‑ins are gentle prompts.  
+          Use a single number like <span className="font-mono">10</span> for “every 10 minutes”,  
+          or a list like <span className="font-mono">5, 12, 18</span> for custom moments.  
+          Leave it empty if you don&apos;t want check‑ins.
+        </p>
 
         <button
           id="btn-start"
@@ -1065,22 +1107,32 @@ export default function PopupApp() {
           ⏹ End focus early
         </button>
 
-        <div className="mt-1 flex items-center gap-2">
-          <select
-            id="relax-game-select"
-            className="flex-1 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-500"
-            value={relaxGame}
-            onChange={(e) => setRelaxGame(e.target.value)}
-          >
-            <option value="sniper">Visual search (dogs / numbers)</option>
-            <option value="chain">Focus chain only</option>
-          </select>
+        <div className="mt-2 flex items-center gap-2">
+          <div className="flex-1 flex flex-col gap-1">
+            <span className="text-[9px] font-medium text-slate-500">
+              BRAIN BREAK GAME (OPTIONAL)
+            </span>
+            <div className="relative">
+              <select
+                id="relax-game-select"
+                className="w-full rounded-md border border-slate-700/80 bg-slate-950/90 px-2.5 py-1.5 pr-6 text-[11px] text-slate-100 shadow-inner outline-none ring-offset-2 ring-offset-slate-950 focus:ring-2 focus:ring-indigo-400/80 appearance-none"
+                value={relaxGame}
+                onChange={(e) => setRelaxGame(e.target.value)}
+              >
+                <option value="sniper">Spot‑the‑target (dogs / numbers)</option>
+                <option value="chain">Focus chain only</option>
+              </select>
+              <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-[10px] text-slate-500">
+                ▾
+              </span>
+            </div>
+          </div>
           <button
             id="btn-relax-game"
             className={BTN_SECONDARY}
             onClick={handleRelaxGame}
           >
-            🧩 Relax game
+            🧩 Start game
           </button>
         </div>
       </div>
@@ -1090,6 +1142,10 @@ export default function PopupApp() {
         <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">
           Scholarship Tools
         </div>
+
+        <p className="text-[10px] text-slate-400 mb-2">
+          All of these helpers are optional. Use them when you&apos;re on a scholarship page and want a quick summary, eligibility check, or to save it for later.
+        </p>
 
         <div className="grid grid-cols-2 gap-2">
           <button

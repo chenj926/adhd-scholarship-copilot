@@ -84,98 +84,341 @@ if (window.__adhdFocusGamesLoaded_v12_1) {
     function resumeTimer() { if (!timerPaused) return; if (pauseStartTs != null) { pauseAccumMs += Date.now() - pauseStartTs; } pauseStartTs = null; timerPaused = false; }
 
     function startVisualSearchGame() {
+      // Prevent stacking if a game is already open
       if (document.getElementById("adhd-game-overlay")) return;
+
+      // Full-screen dimmed overlay
       const overlay = document.createElement("div");
       overlay.id = "adhd-game-overlay";
       Object.assign(overlay.style, {
-        position: "fixed", top: "0", left: "0", width: "100vw", height: "100vh",
-        background: "rgba(15,23,42,0.96)", zIndex: "2147483647",
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        position: "fixed",
+        inset: "0px",
+        width: "100vw",
+        height: "100vh",
+        background: "rgba(15,23,42,0.92)",
+        zIndex: "2147483647",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "16px",
+        boxSizing: "border-box",
       });
 
-      const gameTypes = ["animals", "numbers", "shapes"];
-      const type = randomChoice(gameTypes);
-      let titleText = "", target = "", distractors = [];
+      // Center card
+      const card = document.createElement("div");
+      Object.assign(card.style, {
+        minWidth: "320px",
+        maxWidth: "520px",
+        maxHeight: "90vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "stretch",
+        padding: "16px 18px 14px",
+        background: "#020617",
+        borderRadius: "18px",
+        border: "1px solid #1f2937",
+        boxShadow: "0 18px 45px rgba(15,23,42,0.95)",
+        fontFamily:
+          "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        color: "#e5e7eb",
+      });
+      overlay.appendChild(card);
 
-      if (type === "animals") {
-        const all = ["🐶","🐱","🦊","🐻","🐼","🐨","🐯","🦁","🐸"];
-        target = randomChoice(all); distractors = all.filter((x) => x !== target);
-        titleText = `Find all ${target}`;
-      } else if (type === "numbers") {
-        const digits = ["0","1","2","3","4","5","6","7","8","9"];
-        target = randomChoice(digits); distractors = digits.filter((d) => d !== target);
-        titleText = `Tap every "${target}"`;
-      } else {
-        const shapes = ["⬤","○","▲","△","■","□","◆","◇"];
-        target = randomChoice(shapes); distractors = shapes.filter((s) => s !== target);
-        titleText = `Find all ${target}`;
-      }
+      // Header row
+      const headerRow = document.createElement("div");
+      Object.assign(headerRow.style, {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "4px",
+      });
+      card.appendChild(headerRow);
 
-      const title = document.createElement("h2");
-      title.innerHTML = `🧠 ${titleText}`;
-      Object.assign(title.style, { color: "#facc15", marginBottom: "8px", fontFamily: "system-ui", fontSize:"24px" });
-      overlay.appendChild(title);
+      const leftHeader = document.createElement("div");
+      leftHeader.textContent = "Brain break";
+      Object.assign(leftHeader.style, {
+        fontSize: "11px",
+        textTransform: "uppercase",
+        letterSpacing: "0.08em",
+        color: "#9ca3af",
+        fontWeight: "600",
+      });
+      headerRow.appendChild(leftHeader);
+
+      const gameTypeBadge = document.createElement("div");
+      Object.assign(gameTypeBadge.style, {
+        fontSize: "10px",
+        padding: "3px 8px",
+        borderRadius: "999px",
+        background: "rgba(37,99,235,0.15)",
+        border: "1px solid rgba(129,140,248,0.45)",
+        color: "#c4b5fd",
+      });
+      headerRow.appendChild(gameTypeBadge);
+
+      // Title + subtitle
+      const title = document.createElement("div");
+      Object.assign(title.style, {
+        fontSize: "18px",
+        fontWeight: "700",
+        marginBottom: "4px",
+      });
+      card.appendChild(title);
+
+      const subtitle = document.createElement("div");
+      Object.assign(subtitle.style, {
+        fontSize: "12px",
+        color: "#9ca3af",
+        marginBottom: "10px",
+      });
+      subtitle.textContent = "Tap everything that matches the target.";
+      card.appendChild(subtitle);
+
+      // Status row (target + progress)
+      const statusRow = document.createElement("div");
+      Object.assign(statusRow.style, {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "8px",
+      });
+      card.appendChild(statusRow);
 
       const targetRow = document.createElement("div");
-      targetRow.innerHTML = `Target: <span style="font-size:28px">${target}</span>`;
-      Object.assign(targetRow.style, { color: "#e5e7eb", marginBottom: "10px", fontFamily: "system-ui" });
-      overlay.appendChild(targetRow);
+      Object.assign(targetRow.style, {
+        display: "flex",
+        alignItems: "center",
+        gap: "6px",
+        fontSize: "13px",
+      });
+      statusRow.appendChild(targetRow);
+
+      const targetLabel = document.createElement("span");
+      targetLabel.textContent = "Target:";
+      Object.assign(targetLabel.style, { color: "#9ca3af" });
+      targetRow.appendChild(targetLabel);
+
+      const targetSymbol = document.createElement("span");
+      Object.assign(targetSymbol.style, {
+        fontSize: "24px",
+        padding: "2px 10px",
+        borderRadius: "999px",
+        background:
+          "radial-gradient(circle at 0% 0%, rgba(129,140,248,0.25), transparent)",
+      });
+      targetRow.appendChild(targetSymbol);
+
+      const progressEl = document.createElement("div");
+      Object.assign(progressEl.style, {
+        fontSize: "12px",
+        color: "#a5b4fc",
+        fontWeight: "600",
+      });
+      statusRow.appendChild(progressEl);
+
+      // Grid wrapper
+      const gridWrapper = document.createElement("div");
+      Object.assign(gridWrapper.style, {
+        padding: "10px",
+        borderRadius: "14px",
+        background:
+          "radial-gradient(circle at top, rgba(15,23,42,0.4), rgba(15,23,42,0.95))",
+        border: "1px solid rgba(31,41,55,0.9)",
+        boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.9)",
+      });
+      card.appendChild(gridWrapper);
 
       const grid = document.createElement("div");
       Object.assign(grid.style, {
-        display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: "8px",
-        background: "#020617", padding: "18px", borderRadius: "16px", boxShadow: "0 10px 30px rgba(0,0,0,0.7)",
+        display: "grid",
+        gridTemplateColumns: "repeat(8, 1fr)",
+        gap: "8px",
       });
+      gridWrapper.appendChild(grid);
 
-      const totalCells = 56; const minTargets = 5; const maxTargets = 9;
-      const cells = [];
-      for (let i = 0; i < totalCells; i++) cells.push(randomChoice(distractors));
-      const targetCount = minTargets + Math.floor(Math.random() * (maxTargets - minTargets + 1));
-      const used = new Set();
-      while (used.size < targetCount) {
-        const idx = Math.floor(Math.random() * totalCells);
-        used.add(idx); cells[idx] = target;
-      }
-
-      let found = 0;
-      cells.forEach((ch) => {
-        const box = document.createElement("div");
-        box.textContent = ch;
-        Object.assign(box.style, {
-          width: "42px", height: "42px", display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: "22px", cursor: "pointer", borderRadius: "8px", background: "#f9fafb", color: "#111827",
-          border: "1px solid #cbd5f5", transition: "all 0.12s",
-        });
-
-        box.addEventListener("click", () => {
-          if (ch === target) {
-            if (box.dataset.hit === "1") return;
-            box.dataset.hit = "1";
-            box.style.background = "#22c55e"; box.style.color = "#022c22"; box.style.borderColor = "#bbf7d0"; box.style.transform = "scale(1.05)";
-            found++;
-            title.innerText = `Found ${found} / ${targetCount}`;
-            if (found >= targetCount) {
-              title.innerText = "🎉 Keep going!";
-              setTimeout(() => { overlay.remove(); resumeTimer(); }, 900);
-            }
-          } else {
-            box.style.background = "#ef4444"; box.style.color = "#fef2f2"; box.style.borderColor = "#fecaca";
-            setTimeout(() => { box.style.background = "#f9fafb"; box.style.color = "#111827"; box.style.borderColor = "#cbd5f5"; }, 220);
-          }
-        });
-        grid.appendChild(box);
+      // Footer (hint + skip)
+      const footerRow = document.createElement("div");
+      Object.assign(footerRow.style, {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginTop: "10px",
+        gap: "8px",
       });
-      overlay.appendChild(grid);
+      card.appendChild(footerRow);
+
+      const hint = document.createElement("div");
+      Object.assign(hint.style, {
+        fontSize: "11px",
+        color: "#6b7280",
+      });
+      hint.textContent = "Quick 20–40s reset. You can skip any time.";
+      footerRow.appendChild(hint);
 
       const skip = document.createElement("button");
       skip.textContent = "Skip game";
-      Object.assign(skip.style, { marginTop: "16px", padding: "6px 12px", borderRadius: "999px", border: "1px solid #64748b", background: "transparent", color: "#e5e7eb", cursor: "pointer", fontSize: "13px" });
-      skip.addEventListener("click", () => { overlay.remove(); resumeTimer(); });
-      overlay.appendChild(skip);
+      Object.assign(skip.style, {
+        padding: "6px 12px",
+        borderRadius: "999px",
+        border: "1px solid rgba(148,163,184,0.7)",
+        background: "transparent",
+        color: "#e5e7eb",
+        cursor: "pointer",
+        fontSize: "12px",
+        fontWeight: "500",
+      });
+      footerRow.appendChild(skip);
+
+      // -----------------------------
+      // Game type + target selection
+      // -----------------------------
+      const gameTypes = ["animals", "numbers", "shapes"];
+      const type = randomChoice(gameTypes);
+      gameTypeBadge.textContent =
+        type === "animals" ? "Animals"
+          : type === "numbers" ? "Numbers"
+          : "Shapes";
+
+      let titleText = "";
+      let target = "";
+      let distractors = [];
+
+      if (type === "animals") {
+        const all = ["🐶", "🐱", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐸"];
+        target = randomChoice(all);
+        distractors = all.filter((x) => x !== target);
+        titleText = `Find all ${target}`;
+      } else if (type === "numbers") {
+        const digits = ["0","1","2","3","4","5","6","7","8","9"];
+        target = randomChoice(digits);
+        distractors = digits.filter((d) => d !== target);
+        titleText = `Tap every "${target}"`;
+      } else {
+        const shapes = ["⬤","○","▲","△","■","□","◆","◇"];
+        target = randomChoice(shapes);
+        distractors = shapes.filter((s) => s !== target);
+        titleText = `Find all ${target}`;
+      }
+
+      title.textContent = titleText;
+      targetSymbol.textContent = target;
+
+      // -----------------------------
+      // Grid generation
+      // -----------------------------
+      const totalCells = 56;
+      const minTargets = 5;
+      const maxTargets = 9;
+      const cells = [];
+
+      for (let i = 0; i < totalCells; i++) {
+        cells.push(randomChoice(distractors));
+      }
+
+      const targetCount =
+        minTargets + Math.floor(Math.random() * (maxTargets - minTargets + 1));
+
+      const used = new Set();
+      while (used.size < targetCount) {
+        const idx = Math.floor(Math.random() * totalCells);
+        used.add(idx);
+        cells[idx] = target;
+      }
+
+      let found = 0;
+      progressEl.textContent = `Found ${found} / ${targetCount}`;
+
+      cells.forEach((ch) => {
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.textContent = ch;
+
+        Object.assign(cell.style, {
+          width: "44px",
+          height: "44px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: type === "numbers" ? "18px" : "24px",
+          cursor: "pointer",
+          borderRadius: "10px",
+          background: "#020617",
+          color: "#e5e7eb",
+          border: "1px solid rgba(31,41,55,0.9)",
+          boxShadow: "0 4px 10px rgba(15,23,42,0.9)",
+          transition:
+            "transform 0.12s ease-out, box-shadow 0.12s ease-out, border-color 0.12s ease-out, background 0.12s ease-out, color 0.12s ease-out",
+        });
+
+        cell.addEventListener("mouseenter", () => {
+          if (cell.dataset.hit === "1") return;
+          cell.style.transform = "translateY(-1px)";
+          cell.style.boxShadow = "0 6px 14px rgba(15,23,42,0.95)";
+          cell.style.borderColor = "rgba(148,163,184,0.9)";
+        });
+
+        cell.addEventListener("mouseleave", () => {
+          if (cell.dataset.hit === "1") return;
+          cell.style.transform = "translateY(0)";
+          cell.style.boxShadow = "0 4px 10px rgba(15,23,42,0.9)";
+          cell.style.background = "#020617";
+          cell.style.color = "#e5e7eb";
+          cell.style.borderColor = "rgba(31,41,55,0.9)";
+        });
+
+        cell.addEventListener("click", () => {
+          if (ch === target) {
+            if (cell.dataset.hit === "1") return;
+            cell.dataset.hit = "1";
+
+            cell.style.transform = "translateY(-1px) scale(1.03)";
+            cell.style.background =
+              "radial-gradient(circle at 0% 0%, #22c55e, #166534)";
+            cell.style.color = "#ecfdf5";
+            cell.style.borderColor = "#bbf7d0";
+            cell.style.boxShadow = "0 8px 20px rgba(22,163,74,0.6)";
+
+            found++;
+            progressEl.textContent = `Found ${found} / ${targetCount}`;
+
+            if (found >= targetCount) {
+              title.textContent = "Nicely done 🙌";
+              subtitle.textContent = "You can jump back into your task now.";
+              setTimeout(() => {
+                overlay.remove();
+                resumeTimer();
+              }, 900);
+            }
+          } else {
+            cell.style.background =
+              "radial-gradient(circle at 0% 0%, #b91c1c, #7f1d1d)";
+            cell.style.color = "#fee2e2";
+            cell.style.borderColor = "#fecaca";
+            cell.style.boxShadow = "0 8px 20px rgba(185,28,28,0.6)";
+
+            setTimeout(() => {
+              if (cell.dataset.hit === "1") return;
+              cell.style.background = "#020617";
+              cell.style.color = "#e5e7eb";
+              cell.style.borderColor = "rgba(31,41,55,0.9)";
+              cell.style.boxShadow = "0 4px 10px rgba(15,23,42,0.9)";
+            }, 260);
+          }
+        });
+
+        grid.appendChild(cell);
+      });
+
+      // Skip button handler
+      skip.addEventListener("click", () => {
+        overlay.remove();
+        resumeTimer();
+      });
 
       document.body.appendChild(overlay);
       pauseTimer();
     }
+
 
     // ============================================================================
     // 3. CHAIN HUD + TIMER (Preserved)
